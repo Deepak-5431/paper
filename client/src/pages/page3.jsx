@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
-import { 
-  Box, Typography, Button, Radio, FormControlLabel, Select, MenuItem, 
-  IconButton, Grid, Paper, Modal, Avatar, Tooltip
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Box, Typography, Button, Radio, FormControlLabel, Select, MenuItem,
+  IconButton, Grid, Paper, Modal, Avatar, Tooltip, CircularProgress
 } from '@mui/material';
-import { 
-  Menu as MenuIcon,  Language, Report,  Bolt, Eject,
-  Timer, HourglassEmpty, Block, ArrowBack, Sort
+import {
+  Menu as MenuIcon, Language, Report, Bolt,
+  Timer, HourglassEmpty, Block, ArrowBack,
+  Eject, ArrowForward
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import Header2 from "../components/header2"
+import Header2 from "../components/header2";
 import { useNavigate } from 'react-router-dom';
 
 const theme = createTheme({
@@ -37,7 +38,6 @@ const theme = createTheme({
     fontFamily: 'Roboto, sans-serif',
   },
 });
-
 
 const StyledContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -69,7 +69,7 @@ const BottomNav = styled(Paper)(({ theme }) => ({
 const MainContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexGrow: 1,
-  height: 'calc(100vh - 70px)', 
+  height: 'calc(100vh - 70px)',
   marginBottom: '70px',
   [theme.breakpoints.down('md')]: {
     flexDirection: 'column',
@@ -155,21 +155,21 @@ const QuestionNumBox = styled(Box)(({ theme, status, current }) => ({
   fontWeight: 500,
   cursor: 'pointer',
   transition: 'all 0.2s ease',
-  backgroundColor: status === 'correct' ? theme.palette.success.main :
+  backgroundColor: status === 'answered' ? theme.palette.success.main :
     status === 'marked' ? theme.palette.info.main :
-    status === 'unattempted' ? theme.palette.grey[300] :
-    status === 'marked-answered' ? theme.palette.warning.main :
-    status === 'incorrect' ? theme.palette.error.main :
-    status === 'partially-correct' ? theme.palette.primary.main :
+    status === 'not-visited' ? theme.palette.grey[300] :
+    status === 'answered-marked' ? theme.palette.warning.main :
+    status === 'not-answered' ? theme.palette.error.main :
+    status === 'partially-answered' ? theme.palette.primary.main :
     theme.palette.grey[200],
-  color: ['correct', 'marked', 'marked-answered', 'incorrect', 'partially-correct'].includes(status) ? 
+  color: ['answered', 'marked', 'answered-marked', 'not-answered', 'partially-answered'].includes(status) ?
     theme.palette.common.white : theme.palette.text.primary,
-  borderColor: status === 'correct' ? theme.palette.success.main :
+  borderColor: status === 'answered' ? theme.palette.success.main :
     status === 'marked' ? theme.palette.info.main :
-    status === 'unattempted' ? theme.palette.grey[300] :
-    status === 'marked-answered' ? theme.palette.warning.main :
-    status === 'incorrect' ? theme.palette.error.main :
-    status === 'partially-correct' ? theme.palette.primary.main :
+    status === 'not-visited' ? theme.palette.grey[300] :
+    status === 'answered-marked' ? theme.palette.warning.main :
+    status === 'not-answered' ? theme.palette.error.main :
+    status === 'partially-answered' ? theme.palette.primary.main :
     theme.palette.divider,
   ...(current && {
     border: `2px solid ${theme.palette.primary.main}`,
@@ -280,51 +280,71 @@ const MenuButton = styled(Button)(({ theme, colorvariant }) => ({
 }));
 
 const Page3 = () => {
-
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(3600); 
-  const [currentQuestion, setCurrentQuestion] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(3600);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [questionStatus, setQuestionStatus] = useState({
-    1: 'current',
-    2: 'correct',
-    3: 'marked',
-    4: 'marked-answered',
-    5: 'unattempted',
-    6: 'unattempted',
-    7: 'incorrect',
-    8: 'unattempted',
-    9: 'unattempted',
-    10: 'unattempted',
-  });
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [questionStatus, setQuestionStatus] = useState({});
 
-  
   useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 0) {
-          clearInterval(timerInterval);
-          
-          return 0;
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/api/quest');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return prev - 1;
-      });
-    }, 1000);
+        const apiData = await response.json();
+        
+        // Fixed: Use apiData.questions instead of apiData.Questions
+        const fetchedQuestions = apiData.questions || [];
+        
+        if (fetchedQuestions.length === 0) {
+          throw new Error("No questions found in API response");
+        }
 
-    return () => clearInterval(timerInterval);
+        setQuestions(fetchedQuestions);
+
+        // Initialize question status after questions are loaded
+        const initialStatus = {};
+        fetchedQuestions.forEach((q, index) => {
+          initialStatus[q._id] = index === 0 ? 'current' : 'not-visited';
+        });
+        setQuestionStatus(initialStatus);
+
+      } catch (e) {
+        setError(e.message);
+        console.error("Failed to fetch questions:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
   }, []);
 
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timerInterval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 0) {
+            clearInterval(timerInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
+      return () => clearInterval(timerInterval);
+    }
+  }, [timeLeft]);
 
-
-
-
-  
-  
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -332,17 +352,14 @@ const Page3 = () => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };
 
-  
   useEffect(() => {
     const handleClickOutside = (event) => {
       const menu = document.getElementById('popupMenu');
@@ -358,158 +375,304 @@ const Page3 = () => {
     };
   }, []);
 
-  
-  const handleAnswerSelect = (questionId, answer) => {
+  const handleAnswerSelect = useCallback((questionId, answer) => {
+    if (!questionId) return;
+    
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer,
     }));
 
-    
-    if (!questionStatus[questionId] || questionStatus[questionId] === 'unattempted') {
-      setQuestionStatus(prev => ({
-        ...prev,
-        [questionId]: 'correct', 
-      }));
-    }
-  };
+    setQuestionStatus(prev => {
+      const newStatus = { ...prev };
+      if (newStatus[questionId] === 'current') {
+        newStatus[questionId] = 'answered';
+      } else if (newStatus[questionId] === 'marked') {
+        newStatus[questionId] = 'answered-marked';
+      } else if (newStatus[questionId] === 'not-visited' || newStatus[questionId] === 'not-answered') {
+        newStatus[questionId] = 'answered';
+      }
+      return newStatus;
+    });
+  }, []);
 
-  
-  const navigateToQuestion = (questionId) => {
-    setCurrentQuestion(questionId);
-    setQuestionStatus(prev => ({
-      ...prev,
-      [questionId]: 'current',
-      [currentQuestion]: prev[currentQuestion] === 'current' ? 'unattempted' : prev[currentQuestion],
-    }));
-  };
+  const navigateToQuestion = useCallback((index) => {
+    if (index < 0 || index >= questions.length || !questions[index]) return;
 
-  
-  const markForReview = () => {
-    setQuestionStatus(prev => ({
-      ...prev,
-      [currentQuestion]: prev[currentQuestion] === 'correct' ? 'marked-answered' : 'marked',
-    }));
-  };
+    setCurrentQuestionIndex(prevIndex => {
+      const prevQuestionId = questions[prevIndex]?._id;
+      const newQuestionId = questions[index]?._id;
 
-  
-  const clearResponse = () => {
+      setQuestionStatus(prev => {
+        const newStatus = { ...prev };
+
+        // Update previous question's status
+        if (prevQuestionId !== undefined) {
+          if (answers[prevQuestionId]) {
+            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'answered-marked' : 'answered';
+          } else {
+            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'marked' : 'not-answered';
+          }
+        }
+
+        // Set new question's status to 'current'
+        newStatus[newQuestionId] = 'current';
+        return newStatus;
+      });
+      return index;
+    });
+  }, [questions, answers]);
+
+  const currentQuestion = questions[currentQuestionIndex];
+
+  const markForReview = useCallback(() => {
+    if (!currentQuestion) return;
+    setQuestionStatus(prev => {
+      const newStatus = { ...prev };
+      const currentId = currentQuestion._id;
+      if (answers[currentId]) {
+        newStatus[currentId] = 'answered-marked';
+      } else {
+        newStatus[currentId] = 'marked';
+      }
+      return newStatus;
+    });
+  }, [currentQuestion, answers]);
+
+  const clearResponse = useCallback(() => {
+    if (!currentQuestion) return;
     const newAnswers = { ...answers };
-    delete newAnswers[currentQuestion];
+    delete newAnswers[currentQuestion._id];
     setAnswers(newAnswers);
-    setQuestionStatus(prev => ({
-      ...prev,
-      [currentQuestion]: 'unattempted',
-    }));
-  };
+    setQuestionStatus(prev => {
+      const newStatus = { ...prev };
+      if (newStatus[currentQuestion._id] === 'answered-marked' || newStatus[currentQuestion._id] === 'marked') {
+        newStatus[currentQuestion._id] = 'marked';
+      } else {
+        newStatus[currentQuestion._id] = 'not-answered';
+      }
+      return newStatus;
+    });
+  }, [currentQuestion, answers]);
 
-  
+  const saveAndNext = useCallback(() => {
+    if (!currentQuestion) return;
+    setQuestionStatus(prev => {
+      const newStatus = { ...prev };
+      const currentId = currentQuestion._id;
+      if (!answers[currentId] && newStatus[currentId] === 'current') {
+        newStatus[currentId] = 'not-answered';
+      }
+      if (newStatus[currentId] === 'marked' && answers[currentId]) {
+        newStatus[currentId] = 'answered-marked';
+      } else if (newStatus[currentId] === 'answered-marked' && !answers[currentId]) {
+        newStatus[currentId] = 'marked';
+      }
+      return newStatus;
+    });
+    navigateToQuestion(currentQuestionIndex + 1);
+  }, [currentQuestion, answers, currentQuestionIndex, navigateToQuestion]);
+
+  const markAndNext = useCallback(() => {
+    markForReview();
+    navigateToQuestion(currentQuestionIndex + 1);
+  }, [markForReview, navigateToQuestion, currentQuestionIndex]);
+
   const handleSubmitTest = () => {
-    
     setSubmitModalOpen(true);
-    
   };
 
-  
   const confirmSubmit = () => {
-    
     setSubmitModalOpen(false);
     alert('Test Submitted!');
-    navigate('/page4')
+    navigate('/Page4');
   };
 
-  
-  const questions = [
-    {
-      id: 1,
-      type: 'MCQ',
-      text: 'A sum of money, at simple interest, doubles in 10 years. In how many years will it triple?',
-      note: 'Note: You can use the virtual keyboard for numerical input questions.',
-      options: ['20 years', '15 years', '30 years', '25 years'],
-      marks: { positive: 2, negative: 0.5 },
-    },
-    {
-      id: 2,
-      type: 'MCQ',
-      text: 'What is the capital of France?',
-      options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
-    },
-    {
-      id: 3,
-      type: 'MCQ',
-      text: 'Which planet is known as the Red Planet?',
-      options: ['Earth', 'Mars', 'Jupiter', 'Venus'],
-    },
-    {
-      id: 4,
-      type: 'MCQ',
-      text: 'What is the largest ocean on Earth?',
-      options: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
-    },
-    {
-      id: 5,
-      type: 'MCQ',
-      text: 'Who painted the Mona Lisa?',
-      options: ['Vincent van Gogh', 'Leonardo da Vinci', 'Pablo Picasso', 'Claude Monet'],
-    },
-    {
-      id: 6,
-      type: 'MCQ',
-      text: 'Which animal lays the largest eggs?',
-      options: ['Hummingbird', 'Ostrich', 'Chicken', 'Eagle'],
-    },
-    {
-      id: 7,
-      type: 'MCQ',
-      text: 'What is the chemical symbol for water?',
-      options: ['O2', 'H2O', 'CO2', 'NaCl'],
-    },
-    {
-      id: 8,
-      type: 'MCQ',
-      text: 'How many continents are there in the world?',
-      options: ['5', '6', '7', '8'],
-    },
-    {
-      id: 9,
-      type: 'MCQ',
-      text: 'What is the largest planet in our solar system?',
-      options: ['Mars', 'Jupiter', 'Saturn', 'Neptune'],
-    },
-    {
-      id: 10,
-      type: 'MCQ',
-      text: 'Which is the longest river in the world?',
-      options: ['Amazon River', 'Nile River', 'Yangtze River', 'Mississippi River'],
-    },
-  ];
+  const renderUserProfile = () => (
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      pb: 2,
+      borderBottom: `1px solid ${theme.palette.divider}`,
+    }}>
+      <Avatar sx={{
+        width: 60,
+        height: 60,
+        bgcolor: 'primary.main',
+        mb: 1,
+        fontSize: '24px',
+        fontWeight: 'bold',
+      }}>
+        A
+      </Avatar>
+      <Typography variant="subtitle1" fontWeight={600}>
+        Abhishek Singh
+      </Typography>
+    </Box>
+  );
+
+  const renderQuestionStatusLegend = () => (
+    <Box sx={{
+      borderTop: `1px solid ${theme.palette.divider}`,
+      borderBottom: `1px solid ${theme.palette.divider}`,
+      pt: 2,
+      pb: 2,
+      display: 'flex',
+      flexWrap: 'wrap',
+      justifyContent: 'space-around',
+      gap: 1,
+    }}>
+      {[
+        { label: 'Answered', color: 'success.main' },
+        { label: 'Marked for review', color: 'info.main' },
+        { label: 'Not Visited', color: 'grey.300' },
+        { label: 'Answered & Marked', color: 'warning.main' },
+        { label: 'Not Answered', color: 'error.main' },
+        { label: 'Partially Answered', color: 'primary.main' },
+      ].map((item, idx) => (
+        <Box key={idx} sx={{
+          display: 'flex',
+          alignItems: 'center',
+          fontSize: '13px',
+          flexBasis: 'calc(50% - 8px)',
+          maxWidth: 'calc(50% - 8px)',
+          whiteSpace: 'nowrap',
+        }}>
+          <Box sx={{
+            width: 16,
+            height: 16,
+            borderRadius: '3px',
+            mr: 1,
+            backgroundColor: item.color,
+            border: `1px solid ${theme.palette.divider}`,
+          }} />
+          {item.label}
+        </Box>
+      ))}
+    </Box>
+  );
+
+  const renderQuestionPalette = () => (
+    <Box>
+      <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+        Question Palette
+      </Typography>
+      <Grid container spacing={1}>
+        {questions.map((q, index) => (
+          <Grid item xs={2} key={q._id} sx={{ minWidth: 0 }}>
+            <QuestionNumBox
+              status={questionStatus[q._id] || 'not-visited'}
+              current={currentQuestionIndex === index}
+              onClick={() => navigateToQuestion(index)}
+            >
+              {index + 1}
+            </QuestionNumBox>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+
+  const renderSpeedIndicators = () => (
+    <Box sx={{
+      borderTop: `1px solid ${theme.palette.divider}`,
+      pt: 2,
+    }}>
+      <Typography variant="subtitle2" gutterBottom>
+        Speed Indicators
+      </Typography>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 1,
+      }}>
+        {[
+          { icon: <Bolt fontSize="small" />, label: 'Fast' },
+          { icon: <Timer fontSize="small" />, label: 'Medium' },
+          { icon: <HourglassEmpty fontSize="small" />, label: 'Slow' },
+          { icon: <Block fontSize="small" />, label: 'Not Rated' },
+        ].map((item, index) => (
+          <IndicatorItem key={index}>
+            {item.icon}
+            <span>{item.label}</span>
+          </IndicatorItem>
+        ))}
+      </Box>
+    </Box>
+  );
+
+  const renderSidebarButtons = () => (
+    <Box sx={{
+      mt: 'auto',
+      borderTop: `1px solid ${theme.palette.divider}`,
+      pt: 2,
+      pb: 4,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 1,
+    }}>
+      <Button variant="contained" color="warning" fullWidth>
+        View Question Paper
+      </Button>
+      <Button
+        variant="contained"
+        sx={{
+          backgroundColor: 'grey.300',
+          color: 'text.primary',
+          '&:hover': { backgroundColor: 'grey.400' },
+        }}
+        fullWidth
+      >
+        Instructions
+      </Button>
+    </Box>
+  );
+
+  if (loading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center', marginRight:'290%' }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>Loading Questions...</Typography>
+        </StyledContainer>
+      </ThemeProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemeProvider theme={theme}>
+        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center', color: 'error.main' }}>
+          <Typography variant="h6">Error: {error}</Typography>
+          <Typography variant="body1">Failed to load questions. Please try again later.</Typography>
+        </StyledContainer>
+      </ThemeProvider>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <ThemeProvider theme={theme}>
+        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center' }}>
+          <Typography variant="h6">No questions available</Typography>
+        </StyledContainer>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
       <StyledContainer>
-       <Header2/ >
+        <Header2 />
         <MainContainer>
           <LeftPanel>
             <ScrollableContent>
-
-            
-             
-
-
-
-
-              {questions.map((question, index) => (
-                <Box 
-                  key={question.id} 
-                  sx={{ 
-                    mb: 5,
-                    display: currentQuestion === question.id ? 'block' : 'none',
-                  }}
-                >
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+              {currentQuestion && (
+                <Box key={currentQuestion._id} sx={{ mb: 5 }}>
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     mb: 2,
                     pb: 1,
@@ -518,20 +681,20 @@ const Page3 = () => {
                     gap: 1,
                   }}>
                     <Typography variant="h6" fontWeight={600}>
-                      Question #{question.id}
+                      Question #{currentQuestionIndex + 1}
                     </Typography>
-                    
+
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                      {question.marks && (
+                      {currentQuestion.marks && (
                         <Typography variant="body2" color="text.secondary">
                           Marks: <Typography component="span" color="success.main" fontWeight="bold">
-                            +{question.marks.positive}
+                            +{currentQuestion.marks.positive}
                           </Typography> / <Typography component="span" color="error.main" fontWeight="bold">
-                            -{question.marks.negative}
+                            -{currentQuestion.marks.negative}
                           </Typography>
                         </Typography>
                       )}
-                      
+
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Language fontSize="small" color="action" />
                         <Select
@@ -543,9 +706,9 @@ const Page3 = () => {
                           <MenuItem value="Hindi">Hindi</MenuItem>
                         </Select>
                       </Box>
-                      
-                      <Button 
-                        size="small" 
+
+                      <Button
+                        size="small"
                         color="primary"
                         sx={{ fontSize: '13px', minWidth: 0 }}
                         startIcon={<Report fontSize="small" />}
@@ -554,47 +717,31 @@ const Page3 = () => {
                       </Button>
                     </Box>
                   </Box>
-                  
-                  
+
                   <Box>
                     <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                      Type: {question.type}
+                      Type: {currentQuestion.type || 'MCQ'}
                     </Typography>
-                    
+
                     <Typography variant="body1" paragraph sx={{ lineHeight: 1.8 }}>
-                      {question.text}
+                      {currentQuestion.text}
                     </Typography>
-                    
-                    {question.note && (
-                      <Box sx={{ 
-                        fontSize: '13px',
-                        color: 'text.secondary',
-                        mt: 1,
-                        p: 1,
-                        borderLeft: `3px solid ${theme.palette.warning.main}`,
-                        backgroundColor: '#fffde7',
-                        borderRadius: '3px',
-                      }}>
-                        {question.note}
-                      </Box>
-                    )}
-                    
-                    
+
                     <Box sx={{ mt: 2 }}>
-                      {question.options.map((option, idx) => (
+                      {currentQuestion.options && currentQuestion.options.map((option, idx) => (
                         <FormControlLabel
                           key={idx}
                           control={
-                            <Radio 
-                              checked={answers[question.id] === option}
-                              onChange={() => handleAnswerSelect(question.id, option)}
+                            <Radio
+                              checked={answers[currentQuestion._id] === option}
+                              onChange={() => handleAnswerSelect(currentQuestion._id, option)}
                               color="primary"
                               size="small"
                             />
                           }
                           label={option}
-                          sx={{ 
-                            display: 'flex', 
+                          sx={{
+                            display: 'flex',
                             alignItems: 'flex-start',
                             mb: 1,
                             '& .MuiTypography-root': { fontSize: '15px' },
@@ -604,231 +751,99 @@ const Page3 = () => {
                     </Box>
                   </Box>
                 </Box>
-              ))}
+              )}
             </ScrollableContent>
           </LeftPanel>
 
-          
-          
           <SidebarOverlay open={sidebarOpen} onClick={toggleSidebar} />
           <RightSidebar open={sidebarOpen}>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                pb: 2,
-                borderBottom: `1px solid ${theme.palette.divider}`,
               }}>
-                <Avatar sx={{ 
-                  width: 60, 
-                  height: 60, 
-                  bgcolor: 'primary.main', 
-                  mb: 1,
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                }}>
-                  A
-                </Avatar>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Abhishek Singh
+                <Typography variant="h6" fontWeight={600}>
+                  Question Status
                 </Typography>
+                <IconButton onClick={toggleSidebar} sx={{ display: { md: 'none' } }}>
+                  <ArrowBack />
+                </IconButton>
               </Box>
-              
-              
-              <Box sx={{ 
-                borderTop: `1px solid ${theme.palette.divider}`,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                pt: 2,
-                pb: 2,
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'space-around',
-                gap: 1,
-              }}>
-                {[
-                  { label: 'Answered', color: 'success.main' },
-                  { label: 'Marked for review', color: 'info.main' },
-                  { label: 'Not Visited', color: 'grey.300' },
-                  { label: 'Answered & Marked', color: 'warning.main' },
-                  { label: 'Not Answered', color: 'error.main' },
-                  { label: 'Partially Answered', color: 'primary.main' },
-                ].map((item, idx) => (
-                  <Box key={idx} sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    fontSize: '13px',
-                    flexBasis: 'calc(50% - 8px)',
-                    maxWidth: 'calc(50% - 8px)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    <Box sx={{ 
-                      width: 16, 
-                      height: 16, 
-                      borderRadius: '3px', 
-                      mr: 1,
-                      backgroundColor: item.color,
-                      border: `1px solid ${theme.palette.divider}`,
-                    }} />
-                    {item.label}
-                  </Box>
-                ))}
-              </Box>
-              
-              <Box>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Question Palette
-                </Typography>
-                
-                <Grid container spacing={1}>
-                  {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-                    <Grid item xs={2} key={num} sx={{ minWidth: 0 }}>
-                      <QuestionNumBox 
-                        status={questionStatus[num] || 'unattempted'}
-                        current={currentQuestion === num}
-                        onClick={() => navigateToQuestion(num)}
-                      >
-                        {num}
-                      </QuestionNumBox>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-
-              {/* Speed Indicators */}
-              <Box sx={{ 
-                borderTop: `1px solid ${theme.palette.divider}`,
-                pt: 2,
-              }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Speed Indicators
-                </Typography>
-                
-                <Box sx={{ 
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 1,
-                }}>
-                  <IndicatorItem active={false}>
-                    <Bolt fontSize="small" />
-                    <span>Fast</span>
-                  </IndicatorItem>
-                  <IndicatorItem active={true}>
-                    <Timer fontSize="small" />
-                    <span>Medium</span>
-                  </IndicatorItem>
-                  <IndicatorItem active={false}>
-                    <HourglassEmpty fontSize="small" />
-                    <span>Slow</span>
-                  </IndicatorItem>
-                  <IndicatorItem active={false}>
-                    <Block fontSize="small" />
-                    <span>Not Rated</span>
-                  </IndicatorItem>
-                </Box>
-              </Box>
-
-              {/* Sidebar Buttons */}
-              <Box sx={{ 
-                mt: 'auto',
-                borderTop: `1px solid ${theme.palette.divider}`,
-                pt: 2,
-                pb: 4,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-              }}>
-                <Button variant="contained" color="warning" fullWidth>
-                  View Question Paper
-                </Button>
-                <Button 
-                  variant="contained" 
-                  onClick={()=>navigate('/')}
-                  sx={{ 
-                    backgroundColor: 'grey.300',
-                    color: 'text.primary',
-                    '&:hover': { backgroundColor: 'grey.400' },
-                  }}
-                  fullWidth
-                >
-                  Instructions
-                </Button>
-              </Box>
+              {renderUserProfile()}
+              {renderQuestionStatusLegend()}
+              {renderQuestionPalette()}
+              {renderSpeedIndicators()}
             </Box>
+            {renderSidebarButtons()}
           </RightSidebar>
         </MainContainer>
 
-        {/* Footer */}
         <BottomNav elevation={3}>
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             gap: 1,
             flexGrow: 1,
             justifyContent: 'flex-start',
             alignItems: 'center',
           }}>
-            <Button 
-              variant="outlined" 
-              color='black'
+            <Button
+              variant="outlined"
               startIcon={<ArrowBack />}
-              disabled={currentQuestion === 1}
-              onClick={() => navigateToQuestion(currentQuestion - 1)}
+              disabled={currentQuestionIndex === 0}
+              onClick={() => navigateToQuestion(currentQuestionIndex - 1)}
               sx={{ whiteSpace: 'nowrap' }}
             >
               Previous
             </Button>
-            
-            <Button 
-              variant="outlined" 
+
+            <Button
+              variant="outlined"
               onClick={clearResponse}
-              sx={{ 
+              sx={{
                 display: { xs: 'none', md: 'flex' },
                 whiteSpace: 'nowrap',
-                backgroundColor:'white'
               }}
             >
               Clear Response
             </Button>
-            
-            <Button 
-              variant="outlined" 
-              onClick={markForReview}
-              
-              sx={{ 
+
+            <Button
+              variant="outlined"
+              onClick={markAndNext}
+              sx={{
                 display: { xs: 'none', md: 'flex' },
                 whiteSpace: 'nowrap',
               }}
             >
-              Mark for review
+              Mark for review & Next
             </Button>
           </Box>
-          
-          {/* Mobile popup menu */}
-          <Box sx={{ 
+
+          <Box sx={{
             position: 'relative',
             display: { xs: 'block', md: 'none' },
             mr: { xs: 1, sm: 2 },
           }}>
             <Tooltip title="Quick actions">
-              <IconButton 
-                color="primary" 
+              <IconButton
+                color="primary"
                 onClick={toggleMenu}
-                sx={{ 
-                  backgroundColor: 'black',
+                sx={{
+                  backgroundColor: 'primary.main',
                   color: 'common.white',
-                  marginRight:'50px',
                   '&:hover': { backgroundColor: 'primary.dark' },
                   width: 48,
                   height: 48,
+                  marginRight: '60px'
                 }}
               >
                 <Eject />
               </IconButton>
             </Tooltip>
-            
+
             <PopupMenu id="popupMenu" open={menuOpen}>
-              <MenuButton 
+              <MenuButton
                 colorvariant="simpleRed"
                 onClick={() => {
                   handleSubmitTest();
@@ -837,21 +852,25 @@ const Page3 = () => {
               >
                 Submit
               </MenuButton>
-              <MenuButton 
-                sx={{ color: '#2196f3',
+              <MenuButton
+                sx={{
+                  color: '#2196f3',
                   backgroundColor: '#ffffff',
-                  border: '1px solid #2196f3', }}
+                  border: '1px solid #2196f3',
+                }}
                 onClick={() => {
                   markForReview();
                   setMenuOpen(false);
                 }}
               >
-                Mark For Preview
+                Mark For Review
               </MenuButton>
-              <MenuButton 
-                  sx={{ color: '#2196f3',
+              <MenuButton
+                sx={{
+                  color: '#2196f3',
                   backgroundColor: '#ffffff',
-                  border: '1px solid #2196f3', }}
+                  border: '1px solid #2196f3',
+                }}
                 onClick={() => {
                   clearResponse();
                   setMenuOpen(false);
@@ -861,30 +880,36 @@ const Page3 = () => {
               </MenuButton>
             </PopupMenu>
           </Box>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 15,
+
+          <Box sx={{
+            display: 'flex',
+            gap: 1,
             alignItems: 'center',
+            justifyContent: { xs: 'flex-end', md: 'space-between' },
+            flexGrow: { xs: 0, md: 1 }
           }}>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               color="primary"
-              sx={{ 
-                mr: { md: 1 },
-                whiteSpace: 'nowrap',
+              onClick={saveAndNext}
+              sx={{
+                whiteSpace: 'nowrap', 
+                marginRight: '10px',
+                display: { xs: 'flex', md: 'flex' }
               }}
+              endIcon={<ArrowForward />}
+              disabled={currentQuestionIndex === questions.length - 1 && !answers[currentQuestion?._id]}
             >
               Save & Next
             </Button>
-            
-            <Button 
-              variant="contained" 
+
+            <Button
+              variant="contained"
               color="error"
-              
-              sx={{ 
+              sx={{
                 display: { xs: 'none', md: 'block' },
-                whiteSpace: 'nowrap', marginRight:'30px',
+                whiteSpace: 'nowrap', 
+                marginRight: '40px',
               }}
               onClick={handleSubmitTest}
             >
@@ -893,7 +918,6 @@ const Page3 = () => {
           </Box>
         </BottomNav>
 
-        {/* Submit Confirmation Modal */}
         <Modal
           open={submitModalOpen}
           onClose={() => setSubmitModalOpen(false)}
@@ -919,16 +943,16 @@ const Page3 = () => {
               Are you sure you want to submit the test? You won't be able to make any changes after submission.
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 color="error"
                 onClick={confirmSubmit}
                 sx={{ flex: 1 }}
               >
                 Confirm
               </Button>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 onClick={() => setSubmitModalOpen(false)}
                 sx={{ flex: 1 }}
               >

@@ -64,10 +64,10 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
     error: { main: '#dc3545' },
     warning: { main: '#fd7e14' },  
     info: { main: '#6f42c1' },  
-    secondary: { main: '#6c757d' },  
+    secondary: { main: '#2196f3' },  
     text: {
       primary: '#333333',
-      secondary: '#555555',
+      secondary: '#2196f3',
       disabled: '#ffffff',  
     },
     background: {
@@ -255,7 +255,7 @@ const Page4 = () => {
                 width: '100%', 
             }}>
               <Button variant="contained" color="secondary">Tests</Button>
-              <Button variant="contained" classes={{ contained: 'submitButton' }} sx={{color:'white', bgcolor:'red'}}>Submit</Button>
+              <Button variant="contained" classes={{ contained: 'submitButton' }} sx={{color:'white', bgcolor:'#f44336'}}>Submit</Button>
             </Box>
           </Paper>
         </Box>
