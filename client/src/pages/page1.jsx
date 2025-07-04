@@ -15,73 +15,74 @@ import {
   createTheme,
   CssBaseline
 } from '@mui/material';
-import Header from '../components/header';
+import Header from '../components/header'; // Make sure this path is correct
 
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
 
-
+// 1. Define your custom Material-UI theme
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#4285f4',
+      main: '#4285f4', // Google Blue
       contrastText: '#ffffff',
     },
     background: {
-      default: '#f0f2f5',
-      paper: '#ffffff',
+      default: '#f0f2f5', // Light grey background
+      paper: '#ffffff',   // White for cards/papers
     },
     text: {
-      primary: '#333333',
-      secondary: '#666666',
+      primary: '#333333', // Dark grey for main text
+      secondary: '#666666', // Lighter grey for secondary text
     },
   },
   typography: {
     fontFamily: 'Roboto, Arial, sans-serif',
     h1: {
-      fontSize: '1.125rem',
+      fontSize: '1.125rem', // 18px
       fontWeight: 500,
-      '@media (max-width: 992px)': {
-        fontSize: '1rem',
+      '@media (max-width: 992px)': { // Laptop/Desktop
+        fontSize: '1rem', // 16px
       },
-      '@media (max-width: 768px)': {
-        fontSize: '0.9375rem',
-        textAlign: 'center',
+      '@media (max-width: 768px)': { // Tablet
+        fontSize: '0.9375rem', // 15px
+        textAlign: 'center', // Centered on tablets and smaller
       },
-      '@media (max-width: 480px)': {
-        fontSize: '0.875rem',
+      '@media (max-width: 480px)': { // Mobile
+        fontSize: '0.875rem', // 14px
       },
     },
     h2: {
-      fontSize: '1.625rem',
+      fontSize: '1.625rem', // 26px
       fontWeight: 600,
       borderBottom: '1px solid #e0e0e0',
       paddingBottom: '10px',
       marginBottom: '15px',
       '@media (max-width: 992px)': {
-        fontSize: '1.5rem',
+        fontSize: '1.5rem', // 24px
       },
       '@media (max-width: 768px)': {
-        fontSize: '1.3rem',
+        fontSize: '1.3rem', // 20.8px
       },
       '@media (max-width: 480px)': {
-        fontSize: '1.15rem',
+        fontSize: '1.15rem', // 18.4px
       },
-      '@media (max-width: 360px)': {
-        fontSize: '1.05rem',
+      '@media (max-width: 360px)': { // Small mobile
+        fontSize: '1.05rem', // 16.8px
       },
     },
     body1: {
+      // Base body text size is 16px by default in MUI
       '@media (max-width: 992px)': {
-        fontSize: '0.9375rem',
+        fontSize: '0.9375rem', // 15px
       },
       '@media (max-width: 768px)': {
-        fontSize: '0.875rem',
+        fontSize: '0.875rem', // 14px
       },
       '@media (max-width: 480px)': {
-        fontSize: '0.8125rem',
+        fontSize: '0.8125rem', // 13px
       },
       '@media (max-width: 360px)': {
-        fontSize: '0.75rem',
+        fontSize: '0.75rem', // 12px
       },
     },
   },
@@ -90,31 +91,31 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           minHeight: '48px',
-          textTransform: 'none',
+          textTransform: 'none', // Prevent uppercase transformation
           fontWeight: 500,
-          fontSize: '1rem',
+          fontSize: '1rem', // 16px
           padding: '10px 20px',
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap', // Keep text on one line if possible
           '@media (max-width: 992px)': {
-            fontSize: '0.9375rem',
+            fontSize: '0.9375rem', // 15px
             padding: '10px 15px',
             minHeight: '44px',
           },
           '@media (max-width: 768px)': {
-            fontSize: '0.875rem',
+            fontSize: '0.875rem', // 14px
             padding: '10px 15px',
             minHeight: '44px',
-            flexShrink: 1,
-            maxWidth: '50%',
+            flexShrink: 1, // Allow buttons to shrink
+            maxWidth: '50%', // Ensure buttons don't take up full width if two exist
           },
           '@media (max-width: 480px)': {
-            fontSize: '0.8125rem',
+            fontSize: '0.8125rem', // 13px
             padding: '8px 10px',
             minHeight: '40px',
-            maxWidth: '49%',
+            maxWidth: '49%', // Allow for side-by-side buttons
           },
           '@media (max-width: 360px)': {
-            fontSize: '0.75rem',
+            fontSize: '0.75rem', // 12px
             padding: '7px 5px',
             minHeight: '38px',
           },
@@ -124,6 +125,7 @@ const theme = createTheme({
     MuiListItem: {
       styleOverrides: {
         root: {
+          // Adjust font size for list items based on screen size
           '@media (max-width: 992px)': {
             fontSize: '0.9375rem',
           },
@@ -142,39 +144,54 @@ const theme = createTheme({
   },
 });
 
-// 2. Helper Component for Status Boxes
+// 2. Helper Component for Status Boxes used in the instructions
 const StatusBox = ({ color }) => (
   <Box
     sx={{
-      width: '1.125rem',
-      height: '1.125rem',
+      width: '1.125rem', // 18px
+      height: '1.125rem', // 18px
       borderRadius: '4px',
       backgroundColor: color,
       border: '1px solid #e0e0e0',
-      flexShrink: 0,
+      flexShrink: 0, // Prevents box from shrinking
     }}
   />
 );
 
-
+// 3. Main Instructions Component
 const InstructionsComponent = () => {
+  const navigate = useNavigate(); // Hook for navigation
 
-  const navigate = useNavigate();
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', backgroundColor: 'background.default', marginLeft: '150px' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'background.default',
+        minHeight: '100vh', // Ensure it takes at least full viewport height
+      }}
+    >
+      {/* Header is positioned fixed, so main content needs top margin */}
       <Header />
 
       <Container
         component="main"
         maxWidth="lg"
         sx={{
+          // Top margin to account for fixed header
           mt: { xs: '55px', md: '60px' },
+          // Bottom margin to account for fixed footer
           mb: { xs: '65px', md: '80px' },
-          flex: 1,
-          p: { xs: 0.5, sm: 1.25, md: 2.5 },
+          flex: 1, // Allows container to grow and take available space
+          p: { xs: 0.5, sm: 1.25, md: 2.5 }, // Responsive padding
+          // Apply margin-left only for medium (md) screens and up
+          // This allows the main content to shift right for a potential sidebar/left nav
+          // but remain full width on smaller screens.
+          ml: { md: '150px', xs: 0 },
         }}
       >
         <Paper elevation={1} sx={{ p: { xs: 1.25, sm: 2, md: 3, lg: 4 } }}>
+          {/* Section for General Instructions header and details */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 3 }}>
             <Box>
               <Typography variant="h2" component="h2" sx={{ mt: 0 }}>General Instructions</Typography>
@@ -184,6 +201,8 @@ const InstructionsComponent = () => {
           </Box>
 
           <Typography variant="body1" paragraph>Read the following instructions carefully.</Typography>
+
+          {/* List of general rules */}
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">The test contain 4 sections having 100 questions.</Typography>
             <Typography component="li" variant="body1">Each question has 4 options out of which only one is correct.</Typography>
@@ -196,6 +215,7 @@ const InstructionsComponent = () => {
           <Typography variant="body1" paragraph>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself. You need not terminate the examination or submit your paper.</Typography>
           <Typography variant="body1" paragraph>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:</Typography>
 
+          {/* List explaining status symbols */}
           <List sx={{ mb: 2, p: 0 }}>
             <ListItem disablePadding sx={{ mb: 1.25 }}>
               <ListItemIcon sx={{ minWidth: 25, mr: 1.25 }}><StatusBox color="#f8f9fa" /></ListItemIcon>
@@ -221,6 +241,7 @@ const InstructionsComponent = () => {
 
           <Typography variant="body1" paragraph>The <b>Mark For Review</b> status for a question simply indicates that you would like to look at that question again. If a question is answered, but marked for review, that answer will be considered for evaluation unless the status is modified by the candidate.</Typography>
 
+          {/* Section: Navigating to a Question */}
           <Typography variant="h2" component="h2">Navigating to a Question :</Typography>
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">To answer a question, do the following:
@@ -234,6 +255,7 @@ const InstructionsComponent = () => {
           <Typography variant="body1" paragraph>Note that your answer for the current question will not be saved, if you navigate to another question directly by clicking on a question number without saving the answer to the previous question.</Typography>
           <Typography variant="body1" paragraph>You can view all the questions by clicking on the <b>Question Paper</b> button. This feature is provided, so that if you want you can just see the entire question paper at a glance.</Typography>
 
+          {/* Section: Answering a Question */}
           <Typography variant="h2" component="h2">Answering a Question :</Typography>
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">Procedure for answering a multiple choice (MCQ) type question:
@@ -256,22 +278,24 @@ const InstructionsComponent = () => {
             <Typography component="li" variant="body1">To change your answer to a question that has already been answered, first select that question for answering and then follow the procedure for answering that type of question.</Typography>
             <Typography component="li" variant="body1">Note that ONLY Questions for which answers are <b>saved</b> or marked for review after answering will be considered for evaluation.</Typography>
             <Typography component="li" variant="body1">Sections in this question paper are displayed on the top bar of the screen. Sections in a Section can be viewed by clicking on the name of that Section. The Section you are currently viewing will be highlighted.</Typography>
-            <Typography component="li" v="body1">After clicking the <b>Save & Next</b> button for the last question in a Section, you will automatically be taken to the first question of the next Section in sequence.</Typography>
+            {/* Corrected: Removed duplicate 'v' prop */}
+            <Typography component="li" variant="body1">After clicking the <b>Save & Next</b> button for the last question in a Section, you will automatically be taken to the first question of the next Section in sequence.</Typography>
             <Typography component="li" variant="body1">You can move the mouse cursor over the name of a Section to view the answering status for that Section.</Typography>
           </Box>
         </Paper>
       </Container>
 
+      {/* Fixed bottom AppBar for navigation buttons */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          top: 'auto',
+          top: 'auto', // Position at bottom
           bottom: 0,
           backgroundColor: 'background.paper',
-          boxShadow: '0 -2px 5px rgba(0,0,0,0.1)',
-          borderTop: '1px solid #e0e0e0',
-          height: { xs: 65, md: 80 },
+          boxShadow: '0 -2px 5px rgba(0,0,0,0.1)', // Shadow above the bar
+          borderTop: '1px solid #e0e0e0', // Light border on top
+          height: { xs: 65, md: 80 }, // Responsive height
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', height: '100%', px: { xs: 1, sm: 2, md: 3 } }}>
@@ -285,6 +309,7 @@ const InstructionsComponent = () => {
                 backgroundColor: '#e9ecef',
                 borderColor: '#e0e0e0'
               },
+              // Responsive font size and padding for button
               '@media (max-width: 480px)': {
                 fontSize: '0.75rem',
                 padding: '8px 5px'
@@ -300,10 +325,10 @@ const InstructionsComponent = () => {
           <Button
             variant="contained"
             endIcon={<ArrowForward />}
-            onClick={() => navigate('/page2')}
+            onClick={() => navigate('/page2')} // Navigate to the next page
             sx={{
               '&:hover': {
-                backgroundColor: '#3367d6'
+                backgroundColor: '#3367d6' // Darker blue on hover
               }
             }}
           >
@@ -316,11 +341,10 @@ const InstructionsComponent = () => {
 };
 
 
-// 4. Final Exported Component (combining App.js and InstructionsPage.js)
 const Page1 = () => {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
+      <CssBaseline /> 
       <InstructionsComponent />
     </ThemeProvider>
   );
