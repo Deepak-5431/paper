@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Radio, FormControlLabel, Select, MenuItem,
-  IconButton, Grid, Paper, Modal, Avatar, Tooltip, CircularProgress
+  IconButton, Grid, Paper, Modal, Avatar, Tooltip, CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Menu as MenuIcon, Language, Report, Bolt,
@@ -292,26 +293,28 @@ const Page3 = () => {
   const [error, setError] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
 
+  const handleCloseErrorModal = () => setError(null);
+
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
         setLoading(true);
+        setError(null);
+
         const response = await fetch('http://localhost:5000/api/quest');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const apiData = await response.json();
-        
-        // Fixed: Use apiData.questions instead of apiData.Questions
+
         const fetchedQuestions = apiData.questions || [];
-        
+
         if (fetchedQuestions.length === 0) {
           throw new Error("No questions found in API response");
         }
 
         setQuestions(fetchedQuestions);
 
-        // Initialize question status after questions are loaded
         const initialStatus = {};
         fetchedQuestions.forEach((q, index) => {
           initialStatus[q._id] = index === 0 ? 'current' : 'not-visited';
@@ -330,7 +333,7 @@ const Page3 = () => {
   }, []);
 
   useEffect(() => {
-    if (timeLeft > 0) {
+    if (timeLeft > 0 && !loading && !error) { 
       const timerInterval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 0) {
@@ -343,8 +346,8 @@ const Page3 = () => {
 
       return () => clearInterval(timerInterval);
     }
-  }, [timeLeft]);
-
+  }, [timeLeft, loading, error]); 
+  
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -363,7 +366,7 @@ const Page3 = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       const menu = document.getElementById('popupMenu');
-      const popupBtn = document.querySelector('.popup-btn');
+      const popupBtn = document.querySelector('.popup-btn'); // Assuming you have a class for the button that opens the menu
       if (menu && popupBtn && !menu.contains(event.target) && !popupBtn.contains(event.target)) {
         setMenuOpen(false);
       }
@@ -377,7 +380,7 @@ const Page3 = () => {
 
   const handleAnswerSelect = useCallback((questionId, answer) => {
     if (!questionId) return;
-    
+
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer,
@@ -406,7 +409,6 @@ const Page3 = () => {
       setQuestionStatus(prev => {
         const newStatus = { ...prev };
 
-        // Update previous question's status
         if (prevQuestionId !== undefined) {
           if (answers[prevQuestionId]) {
             newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'answered-marked' : 'answered';
@@ -415,7 +417,6 @@ const Page3 = () => {
           }
         }
 
-        // Set new question's status to 'current'
         newStatus[newQuestionId] = 'current';
         return newStatus;
       });
@@ -629,37 +630,20 @@ const Page3 = () => {
     </Box>
   );
 
-  if (loading) {
-    return (
-      <ThemeProvider theme={theme}>
-        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center', marginRight:'290%' }}>
-          <CircularProgress />
-          <Typography variant="h6" sx={{ mt: 2 }}>Loading Questions...</Typography>
-        </StyledContainer>
-      </ThemeProvider>
-    );
-  }
+  const modalContentStyle = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%', // Reverted to 50% for proper centering within the modal overlay
+    transform: 'translate(-50%, -50%)',
+    width: { xs: '90%', sm: 450 },
+    bgcolor: 'background.paper',
+    boxShadow: 24,
+    p: 4,
+    borderRadius: 2,
+    textAlign: 'center',
+    outline: 'none',
+  };
 
-  if (error) {
-    return (
-      <ThemeProvider theme={theme}>
-        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center', color: 'error.main' }}>
-          <Typography variant="h6">Error: {error}</Typography>
-          <Typography variant="body1">Failed to load questions. Please try again later.</Typography>
-        </StyledContainer>
-      </ThemeProvider>
-    );
-  }
-
-  if (questions.length === 0) {
-    return (
-      <ThemeProvider theme={theme}>
-        <StyledContainer sx={{ justifyContent: 'center', alignItems: 'center' }}>
-          <Typography variant="h6">No questions available</Typography>
-        </StyledContainer>
-      </ThemeProvider>
-    );
-  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -668,7 +652,8 @@ const Page3 = () => {
         <MainContainer>
           <LeftPanel>
             <ScrollableContent>
-              {currentQuestion && (
+              {/* Conditional rendering for question content based on loading/error */}
+              {!loading && !error && questions.length > 0 && currentQuestion ? (
                 <Box key={currentQuestion._id} sx={{ mb: 5 }}>
                   <Box sx={{
                     display: 'flex',
@@ -751,10 +736,35 @@ const Page3 = () => {
                     </Box>
                   </Box>
                 </Box>
+              ) : (
+                // Placeholder content for LeftPanel when loading, error, or no questions
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                  flexDirection: 'column',
+                  textAlign: 'center',
+                  color: 'text.secondary',
+                }}>
+                  {loading && <CircularProgress size={40} />}
+                  {!loading && error && (
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                      {error}
+                    </Typography>
+                  )}
+                  {!loading && !error && questions.length === 0 && (
+                    <Typography variant="h6" sx={{ mt: 2,ml:30 }}>
+                     Unable to fetch the questions  No questions available.
+                    </Typography>
+                  )}
+                  {/* You can add specific messages here if needed */}
+                </Box>
               )}
             </ScrollableContent>
           </LeftPanel>
 
+          {/* Right Sidebar is always rendered */}
           <SidebarOverlay open={sidebarOpen} onClick={toggleSidebar} />
           <RightSidebar open={sidebarOpen}>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
@@ -893,7 +903,7 @@ const Page3 = () => {
               color="primary"
               onClick={saveAndNext}
               sx={{
-                whiteSpace: 'nowrap', 
+                whiteSpace: 'nowrap',
                 marginRight: '10px',
                 display: { xs: 'flex', md: 'flex' }
               }}
@@ -908,7 +918,7 @@ const Page3 = () => {
               color="error"
               sx={{
                 display: { xs: 'none', md: 'block' },
-                whiteSpace: 'nowrap', 
+                whiteSpace: 'nowrap',
                 marginRight: '40px',
               }}
               onClick={handleSubmitTest}
@@ -918,24 +928,14 @@ const Page3 = () => {
           </Box>
         </BottomNav>
 
+        {/* Submit Confirmation Modal */}
         <Modal
           open={submitModalOpen}
           onClose={() => setSubmitModalOpen(false)}
           aria-labelledby="submit-modal-title"
           aria-describedby="submit-modal-description"
         >
-          <Box sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: { xs: '90%', sm: 450 },
-            bgcolor: 'background.paper',
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-            textAlign: 'center',
-          }}>
+          <Box sx={modalContentStyle}>
             <Typography id="submit-modal-title" variant="h6" component="h3" gutterBottom>
               Confirm Submission
             </Typography>
@@ -959,6 +959,33 @@ const Page3 = () => {
                 Cancel
               </Button>
             </Box>
+          </Box>
+        </Modal>
+
+        {/* Error Modal - This will now overlay the entire main layout */}
+        <Modal
+          open={!!error}
+          onClose={handleCloseErrorModal}
+          aria-labelledby="error-modal-title"
+          aria-describedby="error-modal-description"
+        >
+          <Box sx={modalContentStyle}>
+            <Alert severity="error" sx={{ width: '100%' }}>
+              <Typography id="error-modal-title" variant="h6" component="h2" gutterBottom>
+                Error!
+              </Typography>
+              <Typography id="error-modal-description" sx={{ mt: 1 }}>
+                {error}
+              </Typography>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={handleCloseErrorModal}
+                sx={{ mt: 3 }}
+              >
+                Dismiss
+              </Button>
+            </Alert>
           </Box>
         </Modal>
       </StyledContainer>

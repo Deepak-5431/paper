@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -13,76 +14,81 @@ import {
   Paper,
   ThemeProvider,
   createTheme,
-  CssBaseline
+  CssBaseline,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  CircularProgress,
+  Alert
 } from '@mui/material';
-import Header from '../components/header'; // Make sure this path is correct
-
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
+import Header from "../components/header"
 
-// 1. Define your custom Material-UI theme
+// 1. Your exact theme configuration (unchanged)
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#4285f4', // Google Blue
+      main: '#4285f4',
       contrastText: '#ffffff',
     },
     background: {
-      default: '#f0f2f5', // Light grey background
-      paper: '#ffffff',   // White for cards/papers
+      default: '#f0f2f5',
+      paper: '#ffffff',
     },
     text: {
-      primary: '#333333', // Dark grey for main text
-      secondary: '#666666', // Lighter grey for secondary text
+      primary: '#333333',
+      secondary: '#666666',
     },
   },
   typography: {
     fontFamily: 'Roboto, Arial, sans-serif',
     h1: {
-      fontSize: '1.125rem', // 18px
+      fontSize: '1.125rem',
       fontWeight: 500,
-      '@media (max-width: 992px)': { // Laptop/Desktop
-        fontSize: '1rem', // 16px
+      '@media (max-width: 992px)': {
+        fontSize: '1rem',
       },
-      '@media (max-width: 768px)': { // Tablet
-        fontSize: '0.9375rem', // 15px
-        textAlign: 'center', // Centered on tablets and smaller
+      '@media (max-width: 768px)': {
+        fontSize: '0.9375rem',
+        textAlign: 'center',
       },
-      '@media (max-width: 480px)': { // Mobile
-        fontSize: '0.875rem', // 14px
+      '@media (max-width: 480px)': {
+        fontSize: '0.875rem',
       },
     },
     h2: {
-      fontSize: '1.625rem', // 26px
+      fontSize: '1.625rem',
       fontWeight: 600,
       borderBottom: '1px solid #e0e0e0',
       paddingBottom: '10px',
       marginBottom: '15px',
       '@media (max-width: 992px)': {
-        fontSize: '1.5rem', // 24px
+        fontSize: '1.5rem',
       },
       '@media (max-width: 768px)': {
-        fontSize: '1.3rem', // 20.8px
+        fontSize: '1.3rem',
       },
       '@media (max-width: 480px)': {
-        fontSize: '1.15rem', // 18.4px
+        fontSize: '1.15rem',
       },
-      '@media (max-width: 360px)': { // Small mobile
-        fontSize: '1.05rem', // 16.8px
+      '@media (max-width: 360px)': {
+        fontSize: '1.05rem',
       },
     },
     body1: {
-      // Base body text size is 16px by default in MUI
       '@media (max-width: 992px)': {
-        fontSize: '0.9375rem', // 15px
+        fontSize: '0.9375rem',
       },
       '@media (max-width: 768px)': {
-        fontSize: '0.875rem', // 14px
+        fontSize: '0.875rem',
       },
       '@media (max-width: 480px)': {
-        fontSize: '0.8125rem', // 13px
+        fontSize: '0.8125rem',
       },
       '@media (max-width: 360px)': {
-        fontSize: '0.75rem', // 12px
+        fontSize: '0.75rem',
       },
     },
   },
@@ -91,31 +97,31 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           minHeight: '48px',
-          textTransform: 'none', // Prevent uppercase transformation
+          textTransform: 'none',
           fontWeight: 500,
-          fontSize: '1rem', // 16px
+          fontSize: '1rem',
           padding: '10px 20px',
-          whiteSpace: 'nowrap', // Keep text on one line if possible
+          whiteSpace: 'nowrap',
           '@media (max-width: 992px)': {
-            fontSize: '0.9375rem', // 15px
+            fontSize: '0.9375rem',
             padding: '10px 15px',
             minHeight: '44px',
           },
           '@media (max-width: 768px)': {
-            fontSize: '0.875rem', // 14px
+            fontSize: '0.875rem',
             padding: '10px 15px',
             minHeight: '44px',
-            flexShrink: 1, // Allow buttons to shrink
-            maxWidth: '50%', // Ensure buttons don't take up full width if two exist
+            flexShrink: 1,
+            maxWidth: '50%',
           },
           '@media (max-width: 480px)': {
-            fontSize: '0.8125rem', // 13px
+            fontSize: '0.8125rem',
             padding: '8px 10px',
             minHeight: '40px',
-            maxWidth: '49%', // Allow for side-by-side buttons
+            maxWidth: '49%',
           },
           '@media (max-width: 360px)': {
-            fontSize: '0.75rem', // 12px
+            fontSize: '0.75rem',
             padding: '7px 5px',
             minHeight: '38px',
           },
@@ -125,7 +131,6 @@ const theme = createTheme({
     MuiListItem: {
       styleOverrides: {
         root: {
-          // Adjust font size for list items based on screen size
           '@media (max-width: 992px)': {
             fontSize: '0.9375rem',
           },
@@ -144,23 +149,21 @@ const theme = createTheme({
   },
 });
 
-// 2. Helper Component for Status Boxes used in the instructions
 const StatusBox = ({ color }) => (
   <Box
     sx={{
-      width: '1.125rem', // 18px
-      height: '1.125rem', // 18px
+      width: '1.125rem',
+      height: '1.125rem',
       borderRadius: '4px',
       backgroundColor: color,
       border: '1px solid #e0e0e0',
-      flexShrink: 0, // Prevents box from shrinking
+      flexShrink: 0,
     }}
   />
 );
 
-// 3. Main Instructions Component
 const InstructionsComponent = () => {
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
 
   return (
     <Box
@@ -168,30 +171,23 @@ const InstructionsComponent = () => {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'background.default',
-        minHeight: '100vh', // Ensure it takes at least full viewport height
+        minHeight: '100vh',
       }}
     >
-      {/* Header is positioned fixed, so main content needs top margin */}
       <Header />
 
       <Container
         component="main"
         maxWidth="lg"
         sx={{
-          // Top margin to account for fixed header
           mt: { xs: '55px', md: '60px' },
-          // Bottom margin to account for fixed footer
           mb: { xs: '65px', md: '80px' },
-          flex: 1, // Allows container to grow and take available space
-          p: { xs: 0.5, sm: 1.25, md: 2.5 }, // Responsive padding
-          // Apply margin-left only for medium (md) screens and up
-          // This allows the main content to shift right for a potential sidebar/left nav
-          // but remain full width on smaller screens.
+          flex: 1,
+          p: { xs: 0.5, sm: 1.25, md: 2.5 },
           ml: { md: '150px', xs: 0 },
         }}
       >
         <Paper elevation={1} sx={{ p: { xs: 1.25, sm: 2, md: 3, lg: 4 } }}>
-          {/* Section for General Instructions header and details */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 3 }}>
             <Box>
               <Typography variant="h2" component="h2" sx={{ mt: 0 }}>General Instructions</Typography>
@@ -201,8 +197,6 @@ const InstructionsComponent = () => {
           </Box>
 
           <Typography variant="body1" paragraph>Read the following instructions carefully.</Typography>
-
-          {/* List of general rules */}
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">The test contain 4 sections having 100 questions.</Typography>
             <Typography component="li" variant="body1">Each question has 4 options out of which only one is correct.</Typography>
@@ -215,7 +209,6 @@ const InstructionsComponent = () => {
           <Typography variant="body1" paragraph>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself. You need not terminate the examination or submit your paper.</Typography>
           <Typography variant="body1" paragraph>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:</Typography>
 
-          {/* List explaining status symbols */}
           <List sx={{ mb: 2, p: 0 }}>
             <ListItem disablePadding sx={{ mb: 1.25 }}>
               <ListItemIcon sx={{ minWidth: 25, mr: 1.25 }}><StatusBox color="#f8f9fa" /></ListItemIcon>
@@ -239,63 +232,59 @@ const InstructionsComponent = () => {
             </ListItem>
           </List>
 
-          <Typography variant="body1" paragraph>The <b>Mark For Review</b> status for a question simply indicates that you would like to look at that question again. If a question is answered, but marked for review, that answer will be considered for evaluation unless the status is modified by the candidate.</Typography>
+          <Typography variant="body1" paragraph>The **Mark For Review** status for a question simply indicates that you would like to look at that question again. If a question is answered, but marked for review, that answer will be considered for evaluation unless the status is modified by the candidate.</Typography>
 
-          {/* Section: Navigating to a Question */}
           <Typography variant="h2" component="h2">Navigating to a Question :</Typography>
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">To answer a question, do the following:
               <Box component="ol" type="a" sx={{ pl: { xs: 2.5, sm: 3 }, mt: 1, 'li': { mb: 1.25 } }}>
                 <Typography component="li" variant="body1">Click on the question number in the Question Palette at the right of your screen to go to that numbered question directly. Note that using this option does NOT save your answer to the current question.</Typography>
-                <Typography component="li" variant="body1">Click on <b>Save & Next</b> to save your answer for the current question and then go to the next question.</Typography>
-                <Typography component="li" variant="body1">Click on <b>Mark for Review & Next</b> to save your answer for the current question and also mark it for review, and then go to the next question.</Typography>
+                <Typography component="li" variant="body1">Click on **Save & Next** to save your answer for the current question and then go to the next question.</Typography>
+                <Typography component="li" variant="body1">Click on **Mark for Review & Next** to save your answer for the current question and also mark it for review, and then go to the next question.</Typography>
               </Box>
             </Typography>
           </Box>
           <Typography variant="body1" paragraph>Note that your answer for the current question will not be saved, if you navigate to another question directly by clicking on a question number without saving the answer to the previous question.</Typography>
-          <Typography variant="body1" paragraph>You can view all the questions by clicking on the <b>Question Paper</b> button. This feature is provided, so that if you want you can just see the entire question paper at a glance.</Typography>
+          <Typography variant="body1" paragraph>You can view all the questions by clicking on the **Question Paper** button. This feature is provided, so that if you want you can just see the entire question paper at a glance.</Typography>
 
-          {/* Section: Answering a Question */}
           <Typography variant="h2" component="h2">Answering a Question :</Typography>
           <Box component="ol" sx={{ pl: { xs: 2.5, sm: 3 }, mb: 2, 'li': { mb: 1.25 } }}>
             <Typography component="li" variant="body1">Procedure for answering a multiple choice (MCQ) type question:
               <Box component="ol" type="a" sx={{ pl: { xs: 2.5, sm: 3 }, mt: 1, 'li': { mb: 1.25 } }}>
                 <Typography component="li" variant="body1">Choose one answer from the 4 options (A,B,C,D) given below the question, click on the bubble placed before the chosen option.</Typography>
-                <Typography component="li" variant="body1">To deselect your chosen answer, click on the bubble of the chosen option again or click on the <b>Clear Response</b> button</Typography>
+                <Typography component="li" variant="body1">To deselect your chosen answer, click on the bubble of the chosen option again or click on the **Clear Response** button</Typography>
                 <Typography component="li" variant="body1">To change your chosen answer, click on the bubble of another option.</Typography>
-                <Typography component="li" variant="body1">To save your answer, you MUST click on the <b>Save & Next</b></Typography>
+                <Typography component="li" variant="body1">To save your answer, you MUST click on the **Save & Next**</Typography>
               </Box>
             </Typography>
             <Typography component="li" variant="body1">Procedure for answering a numerical answer type question :
               <Box component="ol" type="a" sx={{ pl: { xs: 2.5, sm: 3 }, mt: 1, 'li': { mb: 1.25 } }}>
                 <Typography component="li" variant="body1">To enter a number as your answer, use the virtual numerical keypad.</Typography>
                 <Typography component="li" variant="body1">A fraction (e.g. -0.3 or -3) can be entered as an answer with or without "0" before the decimal point. As many as four decimal points, e.g. 12.5436 or 0.003 or -632.6711 or 12.82 can be entered.</Typography>
-                <Typography component="li" variant="body1">To clear your answer, click on the <b>Clear Response</b> button</Typography>
-                <Typography component="li" variant="body1">To save your answer, you MUST click on the <b>Save & Next</b></Typography>
+                <Typography component="li" variant="body1">To clear your answer, click on the **Clear Response** button</Typography>
+                <Typography component="li" variant="body1">To save your answer, you MUST click on the **Save & Next**</Typography>
               </Box>
             </Typography>
-            <Typography component="li" variant="body1">To mark a question for review, click on the <b>Mark for Review & Next</b> button. If an answer is selected (for MCQ/CAQ) entered (for numerical answer type) for a question that is <b>Marked for Review</b>, that answer will be considered in the evaluation unless the status is modified by the candidate.</Typography>
+            <Typography component="li" variant="body1">To mark a question for review, click on the **Mark for Review & Next** button. If an answer is selected (for MCQ/CAQ) entered (for numerical answer type) for a question that is **Marked for Review**, that answer will be considered in the evaluation unless the status is modified by the candidate.</Typography>
             <Typography component="li" variant="body1">To change your answer to a question that has already been answered, first select that question for answering and then follow the procedure for answering that type of question.</Typography>
-            <Typography component="li" variant="body1">Note that ONLY Questions for which answers are <b>saved</b> or marked for review after answering will be considered for evaluation.</Typography>
+            <Typography component="li" variant="body1">Note that ONLY Questions for which answers are **saved** or marked for review after answering will be considered for evaluation.</Typography>
             <Typography component="li" variant="body1">Sections in this question paper are displayed on the top bar of the screen. Sections in a Section can be viewed by clicking on the name of that Section. The Section you are currently viewing will be highlighted.</Typography>
-            {/* Corrected: Removed duplicate 'v' prop */}
-            <Typography component="li" variant="body1">After clicking the <b>Save & Next</b> button for the last question in a Section, you will automatically be taken to the first question of the next Section in sequence.</Typography>
+            <Typography component="li" variant="body1">After clicking the **Save & Next** button for the last question in a Section, you will automatically be taken to the first question of the next Section in sequence.</Typography>
             <Typography component="li" variant="body1">You can move the mouse cursor over the name of a Section to view the answering status for that Section.</Typography>
           </Box>
         </Paper>
       </Container>
 
-      {/* Fixed bottom AppBar for navigation buttons */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          top: 'auto', // Position at bottom
+          top: 'auto',
           bottom: 0,
           backgroundColor: 'background.paper',
-          boxShadow: '0 -2px 5px rgba(0,0,0,0.1)', // Shadow above the bar
-          borderTop: '1px solid #e0e0e0', // Light border on top
-          height: { xs: 65, md: 80 }, // Responsive height
+          boxShadow: '0 -2px 5px rgba(0,0,0,0.1)',
+          borderTop: '1px solid #e0e0e0',
+          height: { xs: 65, md: 80 },
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', height: '100%', px: { xs: 1, sm: 2, md: 3 } }}>
@@ -309,7 +298,6 @@ const InstructionsComponent = () => {
                 backgroundColor: '#e9ecef',
                 borderColor: '#e0e0e0'
               },
-              // Responsive font size and padding for button
               '@media (max-width: 480px)': {
                 fontSize: '0.75rem',
                 padding: '8px 5px'
@@ -325,10 +313,10 @@ const InstructionsComponent = () => {
           <Button
             variant="contained"
             endIcon={<ArrowForward />}
-            onClick={() => navigate('/page2')} // Navigate to the next page
+            onClick={() => navigate('/page2')}
             sx={{
               '&:hover': {
-                backgroundColor: '#3367d6' // Darker blue on hover
+                backgroundColor: '#3367d6'
               }
             }}
           >
@@ -340,14 +328,155 @@ const InstructionsComponent = () => {
   );
 };
 
-
 const Page1 = () => {
+  const navigate = useNavigate();
+  // isLoggedIn indicates if the user has *just* logged in successfully during this session
+  // loginOpen controls the visibility of the dialog
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(true); // *** KEY CHANGE: Initialize loginOpen to true ***
+  const [loginData, setLoginData] = useState({
+    username: '',
+    password: ''
+  });
+  const [loginError, setLoginError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Console logs to trace component renders and state
+  console.log('--- Page1 Component Render ---');
+  console.log('Current isLoggedIn state:', isLoggedIn);
+  console.log('Current loginOpen state:', loginOpen);
+
+  useEffect(() => {
+    // This useEffect will now primarily be for initial setup, not checking persistence.
+    // The dialog is already set to open by default.
+    console.log('--- Page1 useEffect triggered ---');
+    console.log('Dialog is set to open by default on every load.');
+
+    // If you ever want to reset to a logged-out state (e.g., for a "Logout" button),
+    // you would call setIsLoggedIn(false) and setLoginOpen(true)
+    // You are no longer relying on client-side storage for persistence across refreshes.
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  const handleLoginChange = (e) => {
+    const { name, value } = e.target;
+    setLoginData(prev => ({ ...prev, [name]: value }));
+    console.log(`Login data changed: ${name} = ${value}`);
+  };
+
+  const handleLogin = async () => {
+    console.log('Login button clicked.');
+    console.log('Login data attempting:', loginData);
+
+    if (!loginData.username || !loginData.password) {
+      setLoginError('Username and password are required.');
+      console.log('Validation failed: Username or password missing.');
+      return;
+    }
+
+    setLoading(true);
+    setLoginError('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // If your backend expects a specific type of authentication header (e.g., Bearer Token),
+          // you would add it here *after* a successful login and refresh it on subsequent requests.
+          // For now, if you're not using tokens, just Content-Type is fine.
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      console.log('API Response received. Status:', response.status);
+
+      if (response.ok) {
+        // *** KEY CHANGE: Removed sessionStorage.setItem() ***
+        console.log('Login successful! Updating isLoggedIn and closing loginOpen.');
+        // You would typically get a token/session ID from the backend here
+        // and store it in memory for *this current session*, but not persistently.
+        setIsLoggedIn(true);
+        setLoginOpen(false);
+        setLoginError('');
+      } else {
+        const errorData = await response.json();
+        console.error('Login failed (server response):', errorData);
+        setLoginError(errorData.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err) {
+      console.error('Network or unexpected login error:', err);
+      setLoginError('Network error. Could not connect to the server. Please try again.');
+    } finally {
+      setLoading(false);
+      console.log('Login process finished. Loading set to FALSE.');
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> 
-      <InstructionsComponent />
+      <CssBaseline />
+
+      {/* Login Dialog - Now always initially open */}
+      <Dialog open={loginOpen} onClose={() => { /* Prevent closing if login is mandatory */ }} disableEscapeKeyDown>
+        <DialogTitle>Login Required to Access Instructions</DialogTitle>
+        <DialogContent dividers>
+          {loginError && <Alert severity="error" sx={{ mb: 2 }}>{loginError}</Alert>}
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Username"
+            name="username"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={loginData.username}
+            onChange={handleLoginChange}
+            disabled={loading}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Password"
+            name="password"
+            type="password"
+            fullWidth
+            variant="outlined"
+            value={loginData.password}
+            onChange={handleLoginChange}
+            disabled={loading}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleLogin}
+            color="primary"
+            variant="contained"
+            disabled={loading}
+            endIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {loading ? 'Logging In...' : 'Login'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Conditionally render InstructionsComponent only if isLoggedIn is true */}
+      {isLoggedIn ? (
+        <InstructionsComponent />
+      ) : (
+        // When not logged in, show nothing or a small spinner if the dialog is not open yet
+        // In this setup, loginOpen is always true initially, so this will only show if loginOpen somehow became false without login.
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          backgroundColor: 'background.default'
+        }}>
+          {!loginOpen && <CircularProgress />} {/* This CircularProgress will rarely show with this logic */}
+        </Box>
+      )}
     </ThemeProvider>
   );
-}
+};
 
 export default Page1;

@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist -f --branch gh-pages-temp"
+    "deploy": "gh-pages -d dist -f"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -111,7 +111,7 @@ const Header2 = () => {
     }
   };
 
-  const sections = ['General Intelligence', 'General Awareness', 'English Compr...', 'Reasoning', 'Computer Aptitude'];
+  const sections = ['General Intelligence', 'General Awareness', ' Quantitative Aptitide', 'English Comprehension'];
 
   // User profile component (same as in right sidebar)
   const renderUserProfile = () => (

@@ -1,74 +1,60 @@
 import {
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  Box,
-  AppBar,
-  Toolbar,
-  useMediaQuery,
-  useTheme,
-  CssBaseline
+Typography,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Paper,Button,Box,AppBar,Toolbar,useMediaQuery, useTheme,CssBaseline
 } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
- const theme = createTheme({
+const theme = createTheme({
   typography: {
     fontFamily: 'Roboto, sans-serif',
-    h3: {  
-        fontSize: '1.5rem',
-        fontWeight: 600,
-        '@media (max-width:768px)': {  
-            fontSize: '1.3rem',
-        },
-        '@media (max-width:480px)': {  
-            fontSize: '1.2rem',
-        },
-    },
-    h4: {  
+    h3: {
+      fontSize: '1.5rem',
+      fontWeight: 600,
+      '@media (max-width:768px)': {
         fontSize: '1.3rem',
-        fontWeight: 600,
-        '@media (max-width:480px)': {  
-            fontSize: '1.2rem',
-        },
-    },
-    h5: {  
+      },
+      '@media (max-width:480px)': {
         fontSize: '1.2rem',
-        fontWeight: 600,
+      },
     },
-    h6: { 
+    h4: {
+      fontSize: '1.3rem',
+      fontWeight: 600,
+      '@media (max-width:480px)': {
         fontSize: '1.2rem',
-        fontWeight: 500,
-        '@media (max-width:480px)': {
-            fontSize: '1rem',
-        },
+      },
     },
-    body1: {  
+    h5: {
+      fontSize: '1.2rem',
+      fontWeight: 600,
+    },
+    h6: {
+      fontSize: '1.2rem',
+      fontWeight: 500,
+      '@media (max-width:480px)': {
         fontSize: '1rem',
+      },
     },
-    body2: { 
-        fontSize: '0.95rem',
-        '@media (max-width:768px)': {
-            fontSize: '0.9rem',
-        },
+    body1: {
+      fontSize: '1rem',
+    },
+    body2: {
+      fontSize: '0.95rem',
+      '@media (max-width:768px)': {
+        fontSize: '0.9rem',
+      },
     },
   },
   palette: {
     primary: { main: '#0077B6' },
     success: { main: '#28a745' },
     error: { main: '#dc3545' },
-    warning: { main: '#fd7e14' },  
-    info: { main: '#6f42c1' },  
-    secondary: { main: '#2196f3' },  
+    warning: { main: '#fd7e14' },
+    info: { main: '#6f42c1' },
+    secondary: { main: '#2196f3' },
     text: {
       primary: '#333333',
       secondary: '#2196f3',
-      disabled: '#ffffff',  
+      disabled: '#ffffff',
     },
     background: {
       default: '#f0f2f5',
@@ -78,18 +64,18 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
   },
   components: {
     MuiCssBaseline: {
-        styleOverrides: {
-            body: {
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                fontFamily: 'Roboto, sans-serif',
-                color: '#333333',
-                backgroundColor: '#f0f2f5',
-            }
+      styleOverrides: {
+        body: {
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: 'Roboto, sans-serif',
+          color: '#333333',
+          backgroundColor: '#f0f2f5',
         }
+      }
     },
-   
+
     MuiPaper: {
       styleOverrides: {
         root: {
@@ -103,48 +89,48 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
       },
     },
     MuiAppBar: {
-        styleOverrides: {
-            root: {
-                boxShadow: 'none',
-                backgroundColor: '#ffffff',
-                borderBottom: '1px solid #dddddd',
-                padding: '15px 20px',
-                '@media (max-width:480px)': {
-                    flexDirection: 'column',
-                    gap: '10px',
-                    padding: '12px 15px',
-                },
-            },
+      styleOverrides: {
+        root: {
+          boxShadow: 'none',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #dddddd',
+          padding: '15px 20px',
+          '@media (max-width:480px)': {
+            flexDirection: 'column',
+            gap: '10px',
+            padding: '12px 15px',
+          },
         },
+      },
     },
     MuiToolbar: {
-        styleOverrides: {
-            root: {
-                paddingLeft: '0px',  
-                paddingRight: '0px',  
-                minHeight: 'auto',  
-                '@media (min-width:600px)': {  
-                    paddingLeft: '0px',
-                    paddingRight: '0px',
-                },
-            },
+      styleOverrides: {
+        root: {
+          paddingLeft: '0px',
+          paddingRight: '0px',
+          minHeight: 'auto',
+          '@media (min-width:600px)': {
+            paddingLeft: '0px',
+            paddingRight: '0px',
+          },
         },
+      },
     },
     MuiTableContainer: {
-        styleOverrides: {
-            root: {
-                marginBottom: '30px',
-                overflowX: 'auto',
-                '-webkit-overflow-scrolling': 'touch',
-            }
+      styleOverrides: {
+        root: {
+          marginBottom: '30px',
+          overflowX: 'auto',
+          '-webkit-overflow-scrolling': 'touch',
         }
+      }
     },
     MuiTableHead: {
-        styleOverrides: {
-            root: {
-                backgroundColor: '#e0f2f7',
-            },
+      styleOverrides: {
+        root: {
+          backgroundColor: '#e0f2f7',
         },
+      },
     },
     MuiTableCell: {
       styleOverrides: {
@@ -156,10 +142,10 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
           textAlign: 'center',
           border: '1px solid #dddddd',
           whiteSpace: 'nowrap',
-          fontSize: '0.95rem',  
+          fontSize: '0.95rem',
           '@media (max-width:768px)': {
-              padding: '10px 12px',
-              fontSize: '0.9rem',
+            padding: '10px 12px',
+            fontSize: '0.9rem',
           },
         },
         body: {
@@ -168,8 +154,8 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
           border: '1px solid #dddddd',
           fontSize: '0.95rem',
           '@media (max-width:768px)': {
-              padding: '10px 12px',
-              fontSize: '0.9rem',
+            padding: '10px 12px',
+            fontSize: '0.9rem',
           },
         },
       },
@@ -177,7 +163,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
   },
 });
 
-const Page4 = () => {  
+const Page4 = () => {
   const tableData = [
     { section: 'General Intelligence and Reasoning', questions: 25, answered: 0, notAnswered: 8, markedForReview: 7, notVisited: 17 },
     { section: 'General Awareness', questions: 25, answered: 0, notAnswered: 9, markedForReview: 1, notVisited: 16 },
@@ -186,23 +172,23 @@ const Page4 = () => {
   ];
 
   const currentTheme = useTheme();
-   const isTablet = useMediaQuery(currentTheme.breakpoints.down('md')); 
-  const isMobile = useMediaQuery(currentTheme.breakpoints.down('sm'));  
+  const isTablet = useMediaQuery(currentTheme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(currentTheme.breakpoints.down('sm'));
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      
+
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
-         <Box sx={{
-            flex: 1,  
-            padding: { xs: '15px', sm: '25px 20px' },
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',  
-            overflowY: 'auto',
+        <Box sx={{
+          flex: 1,
+          padding: { xs: '15px', sm: '25px 20px' },
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          overflowY: 'auto',
         }}>
-          <Paper sx={{ width: '100%', maxWidth: '900px', marginTop:'100px' }}>
+          <Paper sx={{ width: '100%', maxWidth: '900px', marginTop: '100px' }}>
             <Typography variant={isMobile ? "h5" : isTablet ? "h4" : "h3"} component="h2" sx={{ marginBottom: { xs: '20px', sm: '25px' }, textAlign: 'center' }}>
               Summary
             </Typography>
@@ -245,21 +231,21 @@ const Page4 = () => {
               </Table>
             </TableContainer>
 
-            <Box sx={{ 
-                display: 'flex',
-                justifyContent: 'center',
-                gap: { xs: '10px', sm: '15px', md: '20px' },
-                marginTop: '20px',
-                flexDirection: 'row', 
-                flexWrap: 'wrap',  
-                width: '100%', 
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: { xs: '10px', sm: '15px', md: '20px' },
+              marginTop: '20px',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              width: '100%',
             }}>
               <Button variant="contained" color="secondary">Tests</Button>
-              <Button variant="contained" classes={{ contained: 'submitButton' }} sx={{color:'white', bgcolor:'#f44336'}}>Submit</Button>
+              <Button variant="contained" classes={{ contained: 'submitButton' }} sx={{ color: 'white', bgcolor: '#f44336' }}>Submit</Button>
             </Box>
           </Paper>
         </Box>
-</Box>
+      </Box>
     </ThemeProvider>
   );
 }
