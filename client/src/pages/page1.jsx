@@ -1,32 +1,24 @@
-import React, { useEffect, useState } from 'react';
+
+import { useUser } from '../context/UserContext';
+import  { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Container,
-  Box,
-  Button,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  ThemeProvider,
-  createTheme,
+  AppBar,  Toolbar,  Typography, Container,
+ Box,  Button,  List,  ListItem,  ListItemIcon,
+  ListItemText,  Paper, ThemeProvider,  createTheme,
   CssBaseline,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  CircularProgress,
-  Alert
+  CircularProgress, Alert
 } from '@mui/material';
 import { ArrowBack, ArrowForward } from '@mui/icons-material';
 import Header from "../components/header"
 
-// 1. Your exact theme configuration (unchanged)
+
 const theme = createTheme({
   palette: {
     primary: {
@@ -164,7 +156,7 @@ const StatusBox = ({ color }) => (
 
 const InstructionsComponent = () => {
   const navigate = useNavigate();
-
+ 
   return (
     <Box
       sx={{
@@ -330,10 +322,10 @@ const InstructionsComponent = () => {
 
 const Page1 = () => {
   const navigate = useNavigate();
-  // isLoggedIn indicates if the user has *just* logged in successfully during this session
-  // loginOpen controls the visibility of the dialog
+   const { setAuthState } = useUser();
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(true); // *** KEY CHANGE: Initialize loginOpen to true ***
+  const [loginOpen, setLoginOpen] = useState(true); 
   const [loginData, setLoginData] = useState({
     username: '',
     password: ''
@@ -341,82 +333,81 @@ const Page1 = () => {
   const [loginError, setLoginError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Console logs to trace component renders and state
+  
   console.log('--- Page1 Component Render ---');
   console.log('Current isLoggedIn state:', isLoggedIn);
   console.log('Current loginOpen state:', loginOpen);
 
   useEffect(() => {
-    // This useEffect will now primarily be for initial setup, not checking persistence.
-    // The dialog is already set to open by default.
-    console.log('--- Page1 useEffect triggered ---');
-    console.log('Dialog is set to open by default on every load.');
 
-    // If you ever want to reset to a logged-out state (e.g., for a "Logout" button),
-    // you would call setIsLoggedIn(false) and setLoginOpen(true)
-    // You are no longer relying on client-side storage for persistence across refreshes.
-  }, []); // Empty dependency array ensures this runs only once on mount
+
+    
+  }, []); 
 
   const handleLoginChange = (e) => {
     const { name, value } = e.target;
     setLoginData(prev => ({ ...prev, [name]: value }));
     console.log(`Login data changed: ${name} = ${value}`);
   };
+  
+const handleLogin = async () => {
+  setLoading(true);
+  setLoginError("");
 
-  const handleLogin = async () => {
-    console.log('Login button clicked.');
-    console.log('Login data attempting:', loginData);
+  try {
+    const payload = {
+      user: loginData.username,
+      password: loginData.password,
+      fcmId: "60",
+      androidVersion: "9",
+      androidVersionCode: "28",
+      appVersion: "1.0",
+      appVersionCode: "1"
+    };
 
-    if (!loginData.username || !loginData.password) {
-      setLoginError('Username and password are required.');
-      console.log('Validation failed: Username or password missing.');
-      return;
+    const { data } = await axios.post("http://localhost:5000/api/login", payload); // ✅ shell API URL
+
+    console.log("Login response:", data);
+
+    if (data.access_token) {
+      const userData = {
+  id: data.userId,
+  username: data.userName,
+  name: `${data.firstName} ${data.lastName}`,
+  role: data.loginType,
+  school: data.schoolName,
+  image: data.loginImage
+};
+
+setAuthState({
+  user: userData,
+  accessToken: data.access_token,
+  refreshToken: data.refresh_token,
+});
+
+      setIsLoggedIn(true);
+      setLoginOpen(false);
+      setLoginData({ username: "", password: "" });
+      setLoginError("");
+    } else {
+      setLoginError("Invalid credentials or missing token");
     }
 
-    setLoading(true);
-    setLoginError('');
+  } catch (err) {
+    console.error("Login failed:", err);
+    setLoginError(err.response?.data?.message || "Login failed. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-    try {
-      const response = await fetch('http://localhost:5000/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // If your backend expects a specific type of authentication header (e.g., Bearer Token),
-          // you would add it here *after* a successful login and refresh it on subsequent requests.
-          // For now, if you're not using tokens, just Content-Type is fine.
-        },
-        body: JSON.stringify(loginData),
-      });
 
-      console.log('API Response received. Status:', response.status);
-
-      if (response.ok) {
-        // *** KEY CHANGE: Removed sessionStorage.setItem() ***
-        console.log('Login successful! Updating isLoggedIn and closing loginOpen.');
-        // You would typically get a token/session ID from the backend here
-        // and store it in memory for *this current session*, but not persistently.
-        setIsLoggedIn(true);
-        setLoginOpen(false);
-        setLoginError('');
-      } else {
-        const errorData = await response.json();
-        console.error('Login failed (server response):', errorData);
-        setLoginError(errorData.message || 'Login failed. Please check your credentials.');
-      }
-    } catch (err) {
-      console.error('Network or unexpected login error:', err);
-      setLoginError('Network error. Could not connect to the server. Please try again.');
-    } finally {
-      setLoading(false);
-      console.log('Login process finished. Loading set to FALSE.');
-    }
-  };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
-      {/* Login Dialog - Now always initially open */}
+      
       <Dialog open={loginOpen} onClose={() => { /* Prevent closing if login is mandatory */ }} disableEscapeKeyDown>
         <DialogTitle>Login Required to Access Instructions</DialogTitle>
         <DialogContent dividers>
@@ -459,12 +450,11 @@ const Page1 = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Conditionally render InstructionsComponent only if isLoggedIn is true */}
+      
       {isLoggedIn ? (
         <InstructionsComponent />
       ) : (
-        // When not logged in, show nothing or a small spinner if the dialog is not open yet
-        // In this setup, loginOpen is always true initially, so this will only show if loginOpen somehow became false without login.
+       
         <Box sx={{
           display: 'flex',
           justifyContent: 'center',
@@ -472,7 +462,7 @@ const Page1 = () => {
           minHeight: '100vh',
           backgroundColor: 'background.default'
         }}>
-          {!loginOpen && <CircularProgress />} {/* This CircularProgress will rarely show with this logic */}
+          {!loginOpen && <CircularProgress />} 
         </Box>
       )}
     </ThemeProvider>

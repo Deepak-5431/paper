@@ -1,8 +1,8 @@
+import { useUser } from '../context/UserContext';
+
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Button, Radio, FormControlLabel, Select, MenuItem,
-  IconButton, Grid, Paper, Modal, Avatar, Tooltip, CircularProgress,
-  Alert
+  Box, Typography, Button, Radio, FormControlLabel, Select, MenuItem, IconButton, Grid, Paper, Modal, Avatar, Tooltip, CircularProgress, Alert
 } from '@mui/material';
 import {
   Menu as MenuIcon, Language, Report, Bolt,
@@ -11,8 +11,10 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import Header2 from "../components/header2";
-import { useNavigate } from 'react-router-dom';
+import Header2 from "../components/header2"
+import axios from 'axios';
+import { useNavigate,useParams } from 'react-router-dom';
+
 
 const theme = createTheme({
   palette: {
@@ -40,6 +42,7 @@ const theme = createTheme({
   },
 });
 
+
 const StyledContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
@@ -47,6 +50,7 @@ const StyledContainer = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.grey[100],
   overflow: 'hidden',
 }));
+
 
 const BottomNav = styled(Paper)(({ theme }) => ({
   display: 'flex',
@@ -67,6 +71,7 @@ const BottomNav = styled(Paper)(({ theme }) => ({
   },
 }));
 
+
 const MainContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexGrow: 1,
@@ -79,8 +84,10 @@ const MainContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
+
 const LeftPanel = styled(Box)(({ theme }) => ({
-  flex: 3,
+  width: '1192px',
+  flexShrink: 0,
   backgroundColor: theme.palette.background.paper,
   borderRight: `1px solid ${theme.palette.divider}`,
   display: 'flex',
@@ -96,6 +103,7 @@ const LeftPanel = styled(Box)(({ theme }) => ({
   },
 }));
 
+
 const ScrollableContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   overflowY: 'auto',
@@ -108,9 +116,10 @@ const ScrollableContent = styled(Box)(({ theme }) => ({
   },
 }));
 
+
 const RightSidebar = styled(Box)(({ theme, open }) => ({
-  flex: 1,
-  minWidth: '280px',
+  width: "100%",
+
   backgroundColor: theme.palette.background.paper,
   display: 'flex',
   flexDirection: 'column',
@@ -123,11 +132,13 @@ const RightSidebar = styled(Box)(({ theme, open }) => ({
     width: '260px',
     height: '100%',
     zIndex: 102,
+    float: 'right',
     boxShadow: theme.shadows[3],
     borderLeft: `1px solid ${theme.palette.divider}`,
-    transition: 'right 0.3s ease-in-out',
+    transition: 'right 0.1s ease-in-out',
   },
 }));
+
 
 const SidebarOverlay = styled(Box)(({ theme, open }) => ({
   display: open ? 'flex' : 'none',
@@ -145,7 +156,8 @@ const SidebarOverlay = styled(Box)(({ theme, open }) => ({
   transition: 'opacity 0.3s ease-in-out',
 }));
 
-const QuestionNumBox = styled(Box)(({ theme, status, current }) => ({
+
+const QuestionNumBox = styled(Box)(({ theme, status, $current }) => ({ // <-- Fix warning
   width: '38px',
   height: '38px',
   display: 'flex',
@@ -158,21 +170,21 @@ const QuestionNumBox = styled(Box)(({ theme, status, current }) => ({
   transition: 'all 0.2s ease',
   backgroundColor: status === 'answered' ? theme.palette.success.main :
     status === 'marked' ? theme.palette.info.main :
-    status === 'not-visited' ? theme.palette.grey[300] :
-    status === 'answered-marked' ? theme.palette.warning.main :
-    status === 'not-answered' ? theme.palette.error.main :
-    status === 'partially-answered' ? theme.palette.primary.main :
-    theme.palette.grey[200],
+      status === 'not-visited' ? theme.palette.grey[300] :
+        status === 'answered-marked' ? theme.palette.warning.main :
+          status === 'not-answered' ? theme.palette.error.main :
+            status === 'partially-answered' ? theme.palette.primary.main :
+              theme.palette.grey[200],
   color: ['answered', 'marked', 'answered-marked', 'not-answered', 'partially-answered'].includes(status) ?
     theme.palette.common.white : theme.palette.text.primary,
   borderColor: status === 'answered' ? theme.palette.success.main :
     status === 'marked' ? theme.palette.info.main :
-    status === 'not-visited' ? theme.palette.grey[300] :
-    status === 'answered-marked' ? theme.palette.warning.main :
-    status === 'not-answered' ? theme.palette.error.main :
-    status === 'partially-answered' ? theme.palette.primary.main :
-    theme.palette.divider,
-  ...(current && {
+      status === 'not-visited' ? theme.palette.grey[300] :
+        status === 'answered-marked' ? theme.palette.warning.main :
+          status === 'not-answered' ? theme.palette.error.main :
+            status === 'partially-answered' ? theme.palette.primary.main :
+              theme.palette.divider,
+  ...($current && { // <-- Fix warning
     border: `2px solid ${theme.palette.primary.main}`,
     boxShadow: `0 0 5px rgba(33, 150, 243, 0.5)`,
   }),
@@ -182,6 +194,7 @@ const QuestionNumBox = styled(Box)(({ theme, status, current }) => ({
     fontSize: '13px',
   },
 }));
+
 
 const IndicatorItem = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.grey[200],
@@ -209,6 +222,7 @@ const IndicatorItem = styled(Box)(({ theme }) => ({
   },
 }));
 
+
 const PopupMenu = styled(Box)(({ theme, open }) => ({
   display: open ? 'flex' : 'none',
   position: 'absolute',
@@ -224,6 +238,7 @@ const PopupMenu = styled(Box)(({ theme, open }) => ({
   flexDirection: 'column',
   gap: theme.spacing(1.5),
 }));
+
 
 const MenuButton = styled(Button)(({ theme, colorvariant }) => ({
   padding: theme.spacing(1.5, 2.5),
@@ -280,7 +295,9 @@ const MenuButton = styled(Button)(({ theme, colorvariant }) => ({
   }),
 }));
 
+
 const Page3 = () => {
+  const { paperId } = useParams();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -292,48 +309,137 @@ const Page3 = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
+  const { authState } = useUser();
+  const handleCloseErrorModal = () => setError(null); 
+  const [sections, setSections] = useState([]);
+  const [currentSectionName, setCurrentSectionName] = useState('');
 
-  const handleCloseErrorModal = () => setError(null);
+  
+  const parseSections = (sectionsString) => {
+    if (!sectionsString) return [];
+    try {
+      return sectionsString.split('@@@').map(sectionStr => {
+        const parts = sectionStr.split('#@#');
+        return {
+          name: parts[0],
+          start: parseInt(parts[1], 10),
+          end: parseInt(parts[2], 10),
+        };
+      });
+    } catch (e) {
+      console.error("Failed to parse sections string:", e);
+      return [];
+    }
+  };
 
+  
+  const navigateToQuestion = useCallback((index) => {
+    if (index < 0 || index >= questions.length || !questions[index]) return;
+    setCurrentQuestionIndex(prevIndex => {
+      const prevQuestionId = questions[prevIndex]?.id;
+      const newQuestionId = questions[index]?.id;
+      setQuestionStatus(prev => {
+        const newStatus = { ...prev };
+        if (prevQuestionId !== undefined) {
+          if (answers[prevQuestionId]) {
+            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'answered-marked' : 'answered';
+          } else {
+            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'marked' : 'not-answered';
+          }
+        }
+        newStatus[newQuestionId] = 'current';
+        return newStatus;
+      });
+      return index;
+    });
+  }, [questions, answers]);
+
+  
+  const handleSectionClick = (startQuestionNumber) => {
+    navigateToQuestion(startQuestionNumber - 1);
+  };
+  
+  
   useEffect(() => {
-    const fetchQuestions = async () => {
+    const fetchAllData = async (token) => {
+      setLoading(true);
+      setError(null);
+      setQuestions([]); // Clear previous questions
+      setSections([]);  // Clear previous sections
+
       try {
-        setLoading(true);
-        setError(null);
+        // --- Fetch Test Paper Details ---
+        const testPaperRes = await axios.get(`/api/testpaper/${paperId}`, { headers: { 'Authorization': token } });
+        const testPaperData = testPaperRes.data;
 
-        const response = await fetch('http://localhost:5000/api/quest');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (testPaperData) {
+          let parsedSections;
+          if (testPaperData.sections) {
+            parsedSections = parseSections(testPaperData.sections);
+          } else {
+            // Fallback for papers with no sections
+            parsedSections = [{ name: 'All Questions', start: 1, end: testPaperData.questions }];
+          }
+          setSections(parsedSections);
+          if (testPaperData.duration) {
+            setTimeLeft(testPaperData.duration * 60);
+          }
         }
-        const apiData = await response.json();
 
-        const fetchedQuestions = apiData.questions || [];
+        // --- Fetch Questions (Corrected and only one call) ---
+        const questionsRes = await axios.get(
+          `/api/questions/${paperId}`,
+          { headers: { 'Authorization': token } }
+        );
 
-        if (fetchedQuestions.length === 0) {
-          throw new Error("No questions found in API response");
+        const possibleData = questionsRes.data?.data || questionsRes.data;
+        if (!Array.isArray(possibleData)) {
+          throw new Error("Invalid questions data format from server.");
         }
-
+        const fetchedQuestions = possibleData.map(q => ({
+          ...q,
+          question: stripHTML(q.question),
+          options: (q.options || []).map(opt => stripHTML(opt)),
+        }));
         setQuestions(fetchedQuestions);
-
+        
+        // --- Initialize Status ---
         const initialStatus = {};
         fetchedQuestions.forEach((q, index) => {
-          initialStatus[q._id] = index === 0 ? 'current' : 'not-visited';
+          initialStatus[q.id || index] = 'not-visited';
         });
+        if (fetchedQuestions.length > 0) {
+            const firstQuestionId = fetchedQuestions[0].id || 0;
+            initialStatus[firstQuestionId] = 'current';
+        }
         setQuestionStatus(initialStatus);
 
       } catch (e) {
-        setError(e.message);
-        console.error("Failed to fetch questions:", e);
+        const errorMessage = e.response?.data?.message || e.message || "Failed to fetch test data.";
+        setError(errorMessage);
+        console.error("Failed to fetch data:", e);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchQuestions();
-  }, []);
+    if (authState.accessToken && paperId) {
+      fetchAllData(authState.accessToken);
+    } else if (!authState.accessToken) {
+      setLoading(false);
+      setError("Authentication required. Please log in.");
+    }
+  }, [authState.accessToken, paperId]);
+
+
+  const stripHTML = (html) => {
+    if (!html) return '';
+    html = html.replace(/<img[^>]*>/gi, '');
+    return html.replace(/<\/?[^>]+(>|$)/g, '').trim();
+  };
 
   useEffect(() => {
-    if (timeLeft > 0 && !loading && !error) { 
+    if (timeLeft > 0 && !loading && !error) {
       const timerInterval = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 0) {
@@ -346,8 +452,9 @@ const Page3 = () => {
 
       return () => clearInterval(timerInterval);
     }
-  }, [timeLeft, loading, error]); 
-  
+  }, [timeLeft, loading, error]);
+
+
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -355,18 +462,21 @@ const Page3 = () => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };
 
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       const menu = document.getElementById('popupMenu');
-      const popupBtn = document.querySelector('.popup-btn'); // Assuming you have a class for the button that opens the menu
+      const popupBtn = document.querySelector('.popup-btn');
       if (menu && popupBtn && !menu.contains(event.target) && !popupBtn.contains(event.target)) {
         setMenuOpen(false);
       }
@@ -377,6 +487,7 @@ const Page3 = () => {
       document.removeEventListener('click', handleClickOutside);
     };
   }, []);
+
 
   const handleAnswerSelect = useCallback((questionId, answer) => {
     if (!questionId) return;
@@ -399,38 +510,14 @@ const Page3 = () => {
     });
   }, []);
 
-  const navigateToQuestion = useCallback((index) => {
-    if (index < 0 || index >= questions.length || !questions[index]) return;
-
-    setCurrentQuestionIndex(prevIndex => {
-      const prevQuestionId = questions[prevIndex]?._id;
-      const newQuestionId = questions[index]?._id;
-
-      setQuestionStatus(prev => {
-        const newStatus = { ...prev };
-
-        if (prevQuestionId !== undefined) {
-          if (answers[prevQuestionId]) {
-            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'answered-marked' : 'answered';
-          } else {
-            newStatus[prevQuestionId] = newStatus[prevQuestionId] === 'marked' ? 'marked' : 'not-answered';
-          }
-        }
-
-        newStatus[newQuestionId] = 'current';
-        return newStatus;
-      });
-      return index;
-    });
-  }, [questions, answers]);
-
   const currentQuestion = questions[currentQuestionIndex];
+
 
   const markForReview = useCallback(() => {
     if (!currentQuestion) return;
     setQuestionStatus(prev => {
       const newStatus = { ...prev };
-      const currentId = currentQuestion._id;
+      const currentId = currentQuestion.id;
       if (answers[currentId]) {
         newStatus[currentId] = 'answered-marked';
       } else {
@@ -440,27 +527,29 @@ const Page3 = () => {
     });
   }, [currentQuestion, answers]);
 
+
   const clearResponse = useCallback(() => {
     if (!currentQuestion) return;
     const newAnswers = { ...answers };
-    delete newAnswers[currentQuestion._id];
+    delete newAnswers[currentQuestion.id];
     setAnswers(newAnswers);
     setQuestionStatus(prev => {
       const newStatus = { ...prev };
-      if (newStatus[currentQuestion._id] === 'answered-marked' || newStatus[currentQuestion._id] === 'marked') {
-        newStatus[currentQuestion._id] = 'marked';
+      if (newStatus[currentQuestion.id] === 'answered-marked' || newStatus[currentQuestion.id] === 'marked') {
+        newStatus[currentQuestion.id] = 'marked';
       } else {
-        newStatus[currentQuestion._id] = 'not-answered';
+        newStatus[currentQuestion.id] = 'not-answered';
       }
       return newStatus;
     });
   }, [currentQuestion, answers]);
 
+
   const saveAndNext = useCallback(() => {
     if (!currentQuestion) return;
     setQuestionStatus(prev => {
       const newStatus = { ...prev };
-      const currentId = currentQuestion._id;
+      const currentId = currentQuestion.id;
       if (!answers[currentId] && newStatus[currentId] === 'current') {
         newStatus[currentId] = 'not-answered';
       }
@@ -474,20 +563,24 @@ const Page3 = () => {
     navigateToQuestion(currentQuestionIndex + 1);
   }, [currentQuestion, answers, currentQuestionIndex, navigateToQuestion]);
 
+
   const markAndNext = useCallback(() => {
     markForReview();
     navigateToQuestion(currentQuestionIndex + 1);
   }, [markForReview, navigateToQuestion, currentQuestionIndex]);
 
+
   const handleSubmitTest = () => {
     setSubmitModalOpen(true);
   };
+
 
   const confirmSubmit = () => {
     setSubmitModalOpen(false);
     alert('Test Submitted!');
     navigate('/Page4');
   };
+
 
   const renderUserProfile = () => (
     <Box sx={{
@@ -497,21 +590,29 @@ const Page3 = () => {
       pb: 2,
       borderBottom: `1px solid ${theme.palette.divider}`,
     }}>
-      <Avatar sx={{
-        width: 60,
-        height: 60,
-        bgcolor: 'primary.main',
-        mb: 1,
-        fontSize: '24px',
-        fontWeight: 'bold',
-      }}>
-        A
+      <Avatar
+        src={authState.user?.image}
+        alt={authState.user?.name}
+        sx={{
+          width: 60,
+          height: 60,
+          bgcolor: 'primary.main',
+          mb: 1,
+          fontSize: '24px',
+          fontWeight: 'bold',
+        }}
+      >
+        {!authState.user?.image && authState.user?.name?.[0]}
       </Avatar>
       <Typography variant="subtitle1" fontWeight={600}>
-        Abhishek Singh
+        {authState.user?.name || 'Guest User'}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        {authState.user?.school || ''}
       </Typography>
     </Box>
   );
+
 
   const renderQuestionStatusLegend = () => (
     <Box sx={{
@@ -528,7 +629,7 @@ const Page3 = () => {
         { label: 'Answered', color: 'success.main' },
         { label: 'Marked for review', color: 'info.main' },
         { label: 'Not Visited', color: 'grey.300' },
-        { label: 'Answered & Marked', color: 'warning.main' },
+        { label: 'Answer&Marked', color: 'warning.main' },
         { label: 'Not Answered', color: 'error.main' },
         { label: 'Partially Answered', color: 'primary.main' },
       ].map((item, idx) => (
@@ -554,6 +655,7 @@ const Page3 = () => {
     </Box>
   );
 
+
   const renderQuestionPalette = () => (
     <Box>
       <Typography variant="subtitle2" fontWeight={600} gutterBottom>
@@ -561,10 +663,10 @@ const Page3 = () => {
       </Typography>
       <Grid container spacing={1}>
         {questions.map((q, index) => (
-          <Grid item xs={2} key={q._id} sx={{ minWidth: 0 }}>
+          <Grid item xs={2} key={q.id || index} sx={{ minWidth: 0 }}>
             <QuestionNumBox
-              status={questionStatus[q._id] || 'not-visited'}
-              current={currentQuestionIndex === index}
+              $current={currentQuestionIndex === index} // <-- Fix warning
+              status={questionStatus[q.id || index] || 'not-visited'}
               onClick={() => navigateToQuestion(index)}
             >
               {index + 1}
@@ -574,6 +676,7 @@ const Page3 = () => {
       </Grid>
     </Box>
   );
+
 
   const renderSpeedIndicators = () => (
     <Box sx={{
@@ -603,6 +706,7 @@ const Page3 = () => {
     </Box>
   );
 
+
   const renderSidebarButtons = () => (
     <Box sx={{
       mt: 'auto',
@@ -630,10 +734,11 @@ const Page3 = () => {
     </Box>
   );
 
+
   const modalContentStyle = {
     position: 'absolute',
     top: '50%',
-    left: '50%', // Reverted to 50% for proper centering within the modal overlay
+    left: '50%',
     transform: 'translate(-50%, -50%)',
     width: { xs: '90%', sm: 450 },
     bgcolor: 'background.paper',
@@ -648,13 +753,16 @@ const Page3 = () => {
   return (
     <ThemeProvider theme={theme}>
       <StyledContainer>
-        <Header2 />
+        <Header2
+          sections={sections}
+          currentSectionName={currentSectionName}
+          onSectionClick={handleSectionClick}
+        />
         <MainContainer>
           <LeftPanel>
             <ScrollableContent>
-              {/* Conditional rendering for question content based on loading/error */}
               {!loading && !error && questions.length > 0 && currentQuestion ? (
-                <Box key={currentQuestion._id} sx={{ mb: 5 }}>
+                <Box key={currentQuestion.id} sx={{ mb: 5 }}>
                   <Box sx={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -665,9 +773,16 @@ const Page3 = () => {
                     flexWrap: 'wrap',
                     gap: 1,
                   }}>
-                    <Typography variant="h6" fontWeight={600}>
-                      Question #{currentQuestionIndex + 1}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+                      {currentSectionName && (
+                        <Typography variant="h5" color="text.secondary">
+                          {currentSectionName}
+                        </Typography>
+                      )}
+                      <Typography variant="h6" fontWeight={600}>
+                        Question #{currentQuestionIndex + 1}
+                      </Typography>
+                    </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                       {currentQuestion.marks && (
@@ -708,18 +823,22 @@ const Page3 = () => {
                       Type: {currentQuestion.type || 'MCQ'}
                     </Typography>
 
-                    <Typography variant="body1" paragraph sx={{ lineHeight: 1.8 }}>
-                      {currentQuestion.text}
+                    <Typography
+                      variant="body1"
+                      paragraph
+                      sx={{ lineHeight: 1.8 }}
+                    >
+                      {currentQuestion.question}
                     </Typography>
 
                     <Box sx={{ mt: 2 }}>
-                      {currentQuestion.options && currentQuestion.options.map((option, idx) => (
+                      {currentQuestion.options && currentQuestion.options.slice(0, 4).map((option, idx) => (
                         <FormControlLabel
                           key={idx}
                           control={
                             <Radio
-                              checked={answers[currentQuestion._id] === option}
-                              onChange={() => handleAnswerSelect(currentQuestion._id, option)}
+                              checked={answers[currentQuestion.id] === option}
+                              onChange={() => handleAnswerSelect(currentQuestion.id, option)}
                               color="primary"
                               size="small"
                             />
@@ -737,7 +856,6 @@ const Page3 = () => {
                   </Box>
                 </Box>
               ) : (
-                // Placeholder content for LeftPanel when loading, error, or no questions
                 <Box sx={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -754,17 +872,15 @@ const Page3 = () => {
                     </Typography>
                   )}
                   {!loading && !error && questions.length === 0 && (
-                    <Typography variant="h6" sx={{ mt: 2,ml:30 }}>
-                     Unable to fetch the questions  No questions available.
+                    <Typography variant="h6" sx={{ mt: 2, ml: 30 }}>
+                      Unable to fetch the questions. No questions available.
                     </Typography>
                   )}
-                  {/* You can add specific messages here if needed */}
                 </Box>
               )}
             </ScrollableContent>
           </LeftPanel>
 
-          {/* Right Sidebar is always rendered */}
           <SidebarOverlay open={sidebarOpen} onClick={toggleSidebar} />
           <RightSidebar open={sidebarOpen}>
             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1 }}>
@@ -826,7 +942,7 @@ const Page3 = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              Mark for review & Next
+              Mark for review
             </Button>
           </Box>
 
@@ -908,7 +1024,7 @@ const Page3 = () => {
                 display: { xs: 'flex', md: 'flex' }
               }}
               endIcon={<ArrowForward />}
-              disabled={currentQuestionIndex === questions.length - 1 && !answers[currentQuestion?._id]}
+              disabled={currentQuestionIndex === questions.length - 1 && !answers[currentQuestion?.id]}
             >
               Save & Next
             </Button>
@@ -928,7 +1044,6 @@ const Page3 = () => {
           </Box>
         </BottomNav>
 
-        {/* Submit Confirmation Modal */}
         <Modal
           open={submitModalOpen}
           onClose={() => setSubmitModalOpen(false)}
@@ -962,7 +1077,6 @@ const Page3 = () => {
           </Box>
         </Modal>
 
-        {/* Error Modal - This will now overlay the entire main layout */}
         <Modal
           open={!!error}
           onClose={handleCloseErrorModal}
