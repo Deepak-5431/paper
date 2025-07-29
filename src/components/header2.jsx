@@ -47,7 +47,7 @@ const theme = createTheme({
   },
 });
 
-// Helper component for responsive button behavior
+
 const ResponsiveButton = ({ icon, text, hideTextAt = 'lg', ...props }) => {
   const isTextHidden = useMediaQuery(theme.breakpoints.down(hideTextAt));
   return (
@@ -64,26 +64,20 @@ const ResponsiveButton = ({ icon, text, hideTextAt = 'lg', ...props }) => {
   );
 };
 
-// ✅ UPDATED: Component now accepts props for sections and navigation
-const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClick }) => {
-  const [timeLeft, setTimeLeft] = useState(3600);
-  const [isPaused, setIsPaused] = useState(false);
+// ✅ 1. Accept the new `timerColor` prop here
+const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClick, timeDisplay, timerColor, isPaused, onPauseToggle }) => {
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Responsive breakpoints for different screen sizes
+
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
   const { authState } = useUser();
 
-  useEffect(() => {
-    if (!isPaused && timeLeft > 0) {
-      const timer = setInterval(() => setTimeLeft(prev => prev > 0 ? prev - 1 : 0), 1000);
-      return () => clearInterval(timer);
-    }
-  }, [timeLeft, isPaused]);
+
 
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -96,11 +90,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
     };
   }, []);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+
 
   const toggleDrawer = (open) => (event) => {
     if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) return;
@@ -119,18 +109,16 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
     }
   };
 
-  // ✅ REMOVED: The hardcoded sections array is no longer needed.
 
-  // ✅ NEW: This function will be called when a user clicks a section button.
   const handleSectionButtonClick = (section) => {
     if (onSectionClick) {
-      // Pass the STARTING question number of the section.
+
       onSectionClick(section.start);
     }
   };
 
 
-  // Render functions for drawer content (no changes needed here)
+
   const renderUserProfile = () => (
     <Box sx={{
       p: 2,
@@ -290,7 +278,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
     </Box>
   );
 
-  // Determine layout based on screen size
+
   const showCompactLayout = isMobile || isTablet;
 
   return (
@@ -306,7 +294,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
             py: { xs: 1, md: 0 }
           }}>
 
-            {/* Left Side - Menu and Sections */}
+
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
@@ -326,7 +314,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                 </IconButton>
               )}
 
-              {/* ✅ UPDATED: Dynamic sections for Desktop */}
+
               {isDesktop && (
                 <>
                   <Button variant="contained" sx={{ bgcolor: 'grey.700', color: 'white' }}>
@@ -336,11 +324,11 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                     {sections.map((section) => (
                       <Button
                         key={section.name}
-                        // ✅ Highlight the current section
+
                         variant={currentSectionName === section.name ? 'contained' : 'outlined'}
                         size="small"
                         sx={{ fontSize: '0.75rem' }}
-                        // ✅ Add click handler
+
                         onClick={() => handleSectionButtonClick(section)}
                       >
                         {section.name}
@@ -350,7 +338,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                 </>
               )}
 
-              {/* ✅ UPDATED: Dynamic sections for Mobile/Tablet */}
+
               {showCompactLayout && (
                 <Box sx={{
                   display: 'flex',
@@ -376,14 +364,14 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                   {sections.map((section) => (
                     <Button
                       key={section.name}
-                       // ✅ Highlight the current section
+
                       variant={currentSectionName === section.name ? 'contained' : 'outlined'}
                       size="small"
                       sx={{
                         flexShrink: 0,
                         fontSize: '0.75rem'
                       }}
-                       // ✅ Add click handler
+
                       onClick={() => handleSectionButtonClick(section)}
                     >
                       {section.name}
@@ -393,28 +381,33 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
               )}
             </Box>
 
-            {/* Right Side - Timer and Controls */}
+
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
               gap: { xs: 1, sm: 2 },
               flexShrink: 0
             }}>
-              {/* Timer */}
+
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                {/* ✅ 2. Apply the color to the icon */}
                 <AccessTime sx={{
                   mr: { xs: 0.5, sm: 1 },
-                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                  color: timerColor
                 }} />
+                
+                {/* ✅ 3. Apply the color to the time display text */}
                 <Typography variant="h6" sx={{
                   fontSize: { xs: '1rem', sm: '1.25rem' },
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  color: timerColor
                 }}>
-                  {formatTime(timeLeft)}
+                  {timeDisplay}
                 </Typography>
               </Box>
 
-              {/* Control Buttons */}
+
               <ResponsiveButton
                 icon={<Fullscreen />}
                 text={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
@@ -426,7 +419,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
               <ResponsiveButton
                 icon={isPaused ? <PlayArrow /> : <Pause />}
                 text={isPaused ? 'Resume' : 'Pause'}
-                onClick={() => setIsPaused(!isPaused)}
+                onClick={onPauseToggle}
                 hideTextAt="lg"
                 sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
               />
@@ -434,7 +427,7 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
           </Toolbar>
         </AppBar>
 
-        {/* Mobile Drawer */}
+
         <Drawer
           anchor="left"
           open={mobileOpen}

@@ -13,7 +13,7 @@ import { styled } from '@mui/material/styles';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Header2 from "../components/header2"
 import axios from 'axios';
-import { useNavigate,useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 
 const theme = createTheme({
@@ -157,7 +157,7 @@ const SidebarOverlay = styled(Box)(({ theme, open }) => ({
 }));
 
 
-const QuestionNumBox = styled(Box)(({ theme, status, $current }) => ({ // <-- Fix warning
+const QuestionNumBox = styled(Box)(({ theme, status, $current }) => ({
   width: '38px',
   height: '38px',
   display: 'flex',
@@ -302,7 +302,7 @@ const Page3 = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(3600);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [questions, setQuestions] = useState([]);
@@ -310,11 +310,52 @@ const Page3 = () => {
   const [error, setError] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
   const { authState } = useUser();
-  const handleCloseErrorModal = () => setError(null); 
+  const handleCloseErrorModal = () => setError(null);
   const [sections, setSections] = useState([]);
   const [currentSectionName, setCurrentSectionName] = useState('');
-
+  const [isPaused, setIsPaused] = useState(false);
   
+  // ✅ 1. Add state for the timer color
+  const [timerColor, setTimerColor] = useState('inherit');
+
+  const confirmSubmit = useCallback(() => {
+    setSubmitModalOpen(false);
+    console.log("Submitting test...");
+    alert('Test has been submitted!');
+    navigate('/Page4');
+  }, [navigate]);
+
+
+  useEffect(() => {
+    if (timeLeft === 0 && !loading && questions.length > 0) {
+      console.log("Time is up. Auto-submitting...");
+      confirmSubmit();
+    }
+  }, [timeLeft, loading, questions, confirmSubmit]);
+
+
+  useEffect(() => {
+    if (!isPaused && timeLeft > 0 && !loading) {
+      const timerInterval = setInterval(() => {
+        setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
+      }, 1000);
+      return () => clearInterval(timerInterval);
+    }
+  }, [timeLeft, isPaused, loading]);
+
+
+  // ✅ 2. Add a useEffect to update the color based on timeLeft
+  useEffect(() => {
+    if (timeLeft <= 600) { // 10 minutes in seconds
+      setTimerColor('error.main'); // Red color
+    } else if (timeLeft <= 1200) { // 20 minutes in seconds
+      setTimerColor('warning.main'); // Orange color
+    } else {
+      setTimerColor('inherit'); // Default color
+    }
+  }, [timeLeft]);
+
+
   const parseSections = (sectionsString) => {
     if (!sectionsString) return [];
     try {
@@ -332,7 +373,7 @@ const Page3 = () => {
     }
   };
 
-  
+
   const navigateToQuestion = useCallback((index) => {
     if (index < 0 || index >= questions.length || !questions[index]) return;
     setCurrentQuestionIndex(prevIndex => {
@@ -354,21 +395,20 @@ const Page3 = () => {
     });
   }, [questions, answers]);
 
-  
+
   const handleSectionClick = (startQuestionNumber) => {
     navigateToQuestion(startQuestionNumber - 1);
   };
-  
-  
+
   useEffect(() => {
     const fetchAllData = async (token) => {
       setLoading(true);
       setError(null);
-      setQuestions([]); // Clear previous questions
-      setSections([]);  // Clear previous sections
+      setQuestions([]);
+      setSections([]);
 
       try {
-        // --- Fetch Test Paper Details ---
+
         const testPaperRes = await axios.get(`/api/testpaper/${paperId}`, { headers: { 'Authorization': token } });
         const testPaperData = testPaperRes.data;
 
@@ -377,7 +417,7 @@ const Page3 = () => {
           if (testPaperData.sections) {
             parsedSections = parseSections(testPaperData.sections);
           } else {
-            // Fallback for papers with no sections
+
             parsedSections = [{ name: 'All Questions', start: 1, end: testPaperData.questions }];
           }
           setSections(parsedSections);
@@ -385,8 +425,7 @@ const Page3 = () => {
             setTimeLeft(testPaperData.duration * 60);
           }
         }
-
-        // --- Fetch Questions (Corrected and only one call) ---
+        
         const questionsRes = await axios.get(
           `/api/questions/${paperId}`,
           { headers: { 'Authorization': token } }
@@ -402,15 +441,15 @@ const Page3 = () => {
           options: (q.options || []).map(opt => stripHTML(opt)),
         }));
         setQuestions(fetchedQuestions);
-        
+
         // --- Initialize Status ---
         const initialStatus = {};
         fetchedQuestions.forEach((q, index) => {
           initialStatus[q.id || index] = 'not-visited';
         });
         if (fetchedQuestions.length > 0) {
-            const firstQuestionId = fetchedQuestions[0].id || 0;
-            initialStatus[firstQuestionId] = 'current';
+          const firstQuestionId = fetchedQuestions[0].id || 0;
+          initialStatus[firstQuestionId] = 'current';
         }
         setQuestionStatus(initialStatus);
 
@@ -434,26 +473,11 @@ const Page3 = () => {
 
   const stripHTML = (html) => {
     if (!html) return '';
+    
     html = html.replace(/<img[^>]*>/gi, '');
     return html.replace(/<\/?[^>]+(>|$)/g, '').trim();
   };
-
-  useEffect(() => {
-    if (timeLeft > 0 && !loading && !error) {
-      const timerInterval = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 0) {
-            clearInterval(timerInterval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timerInterval);
-    }
-  }, [timeLeft, loading, error]);
-
+  
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -564,6 +588,21 @@ const Page3 = () => {
   }, [currentQuestion, answers, currentQuestionIndex, navigateToQuestion]);
 
 
+  useEffect(() => {
+    if (sections.length > 0) {
+
+      const currentQuestionNumber = currentQuestionIndex + 1;
+
+      const foundSection = sections.find(
+        (section) =>
+          currentQuestionNumber >= section.start && currentQuestionNumber <= section.end
+      );
+
+      if (foundSection) {
+        setCurrentSectionName(foundSection.name);
+      }
+    }
+  }, [currentQuestionIndex, sections]);
   const markAndNext = useCallback(() => {
     markForReview();
     navigateToQuestion(currentQuestionIndex + 1);
@@ -575,11 +614,6 @@ const Page3 = () => {
   };
 
 
-  const confirmSubmit = () => {
-    setSubmitModalOpen(false);
-    alert('Test Submitted!');
-    navigate('/Page4');
-  };
 
 
   const renderUserProfile = () => (
@@ -665,7 +699,7 @@ const Page3 = () => {
         {questions.map((q, index) => (
           <Grid item xs={2} key={q.id || index} sx={{ minWidth: 0 }}>
             <QuestionNumBox
-              $current={currentQuestionIndex === index} // <-- Fix warning
+              $current={currentQuestionIndex === index}
               status={questionStatus[q.id || index] || 'not-visited'}
               onClick={() => navigateToQuestion(index)}
             >
@@ -757,6 +791,10 @@ const Page3 = () => {
           sections={sections}
           currentSectionName={currentSectionName}
           onSectionClick={handleSectionClick}
+          timeDisplay={formatTime(timeLeft)}
+          timerColor={timerColor} // ✅ 3. Pass the new prop here
+          isPaused={isPaused}
+          onPauseToggle={() => setIsPaused(prev => !prev)}
         />
         <MainContainer>
           <LeftPanel>
@@ -846,7 +884,7 @@ const Page3 = () => {
                           label={option}
                           sx={{
                             display: 'flex',
-                            alignItems: 'flex-start',
+                            alignItems: 'center',
                             mb: 1,
                             '& .MuiTypography-root': { fontSize: '15px' },
                           }}

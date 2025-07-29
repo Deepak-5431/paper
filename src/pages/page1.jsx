@@ -365,7 +365,7 @@ const handleLogin = async () => {
       appVersionCode: "1"
     };
 
-    const { data } = await axios.post("http://localhost:5000/api/login", payload); // ✅ shell API URL
+    const { data } = await axios.post("http://localhost:5000/api/login", payload); 
 
     console.log("Login response:", data);
 
@@ -384,7 +384,7 @@ setAuthState({
   accessToken: data.access_token,
   refreshToken: data.refresh_token,
 });
-
+navigate('/select-test');
       setIsLoggedIn(true);
       setLoginOpen(false);
       setLoginData({ username: "", password: "" });
