@@ -64,7 +64,7 @@ const ResponsiveButton = ({ icon, text, hideTextAt = 'lg', ...props }) => {
   );
 };
 
-// ✅ 1. Accept the new `timerColor` prop here
+
 const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClick, timeDisplay, timerColor, isPaused, onPauseToggle }) => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -390,14 +390,14 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
             }}>
 
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {/* ✅ 2. Apply the color to the icon */}
+                
                 <AccessTime sx={{
                   mr: { xs: 0.5, sm: 1 },
                   fontSize: { xs: '1rem', sm: '1.25rem' },
                   color: timerColor
                 }} />
                 
-                {/* ✅ 3. Apply the color to the time display text */}
+                
                 <Typography variant="h6" sx={{
                   fontSize: { xs: '1rem', sm: '1.25rem' },
                   fontWeight: 'bold',
