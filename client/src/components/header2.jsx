@@ -1,27 +1,33 @@
-import { useUser } from '../context/UserContext';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Toolbar, Typography, Button, Box, ThemeProvider,
   createTheme, AppBar, useMediaQuery, IconButton,
   Drawer, Avatar, Grid
 } from '@mui/material';
 import {
-  AccessTime, Fullscreen, Pause, PlayArrow,
-  Menu as MenuIcon, Bolt, Timer, HourglassEmpty, Block
+  AccessTime, Fullscreen,
+  Menu as MenuIcon,
+  ArrowBack
 } from '@mui/icons-material';
-import { useState, useEffect } from 'react';
+import { styled } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
-    primary: { main: '#1976d2' },
-    secondary: { main: '#dc004e' },
+    primary: { main: '#2196F3' },
+    secondary: { main: '#007bff' },
+    error: { main: '#f44336' },
+    success: { main: '#4CAF50' },
+    warning: { main: '#FF9800' },
+    info: { main: '#9c27b0' },
   },
-  typography: { fontFamily: 'Inter, sans-serif' },
+  typography: { fontFamily: 'Roboto, sans-serif' },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: 8,
           whiteSpace: 'nowrap',
+          fontSize: '0.75rem',
         },
       },
     },
@@ -41,13 +47,15 @@ const theme = createTheme({
         root: {
           borderRadius: 8,
           minHeight: '64px !important',
+          '@media (min-width: 600px)': {
+            padding: '0 16px',
+          },
         },
       },
     },
   },
 });
 
-// Helper component for responsive button behavior
 const ResponsiveButton = ({ icon, text, hideTextAt = 'lg', ...props }) => {
   const isTextHidden = useMediaQuery(theme.breakpoints.down(hideTextAt));
   return (
@@ -64,26 +72,70 @@ const ResponsiveButton = ({ icon, text, hideTextAt = 'lg', ...props }) => {
   );
 };
 
-// ✅ UPDATED: Component now accepts props for sections and navigation
-const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClick }) => {
-  const [timeLeft, setTimeLeft] = useState(3600);
-  const [isPaused, setIsPaused] = useState(false);
+const statusColors = {
+  'answered': '#4CAF50',
+  'marked': '#9c27b0',
+  'not-visited': '#e0e0e0',
+  'answered-marked': '#FF9800',
+  'not-answered': '#f44336',
+  'thinking': '#2196F3',
+  'partially-answered': '#2196F3',
+};
+
+const QuestionNumBox = styled(Box, {
+  shouldForwardProp: (prop) => prop !== '$current',
+})(({ theme, status, $current }) => ({
+  width: '38px',
+  height: '38px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: '4px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  backgroundColor: status === 'answered' ? theme.palette.success.main :
+      status === 'marked' ? theme.palette.info.main :
+          status === 'not-visited' ? theme.palette.grey[300] :
+              status === 'answered-marked' ? theme.palette.warning.main :
+                  status === 'not-answered' ? theme.palette.error.main :
+                      status === 'partially-answered' ? theme.palette.primary.main :
+                          theme.palette.grey[200],
+  color: ['answered', 'marked', 'answered-marked', 'not-answered', 'partially-answered'].includes(status) ?
+      theme.palette.common.white : theme.palette.text.primary,
+  borderColor: status === 'answered' ? theme.palette.success.main :
+      status === 'marked' ? theme.palette.info.main :
+          status === 'not-visited' ? theme.palette.grey[300] :
+              status === 'answered-marked' ? theme.palette.warning.main :
+                  status === 'not-answered' ? theme.palette.error.main :
+                      status === 'partially-answered' ? theme.palette.primary.main :
+                          theme.palette.divider,
+  ...($current && {
+      border: `2px solid ${theme.palette.primary.main}`,
+      boxShadow: `0 0 5px rgba(33, 150, 243, 0.5)`,
+  }),
+}));
+
+const Header2 = ({
+
+  sections = [],
+  currentQuestionNumber,
+  onQuestionSelect,
+  currentSectionName,
+  onSectionClick,
+  timeDisplay,
+  timerColor,
+  questions = [],
+  questionStatus = {},
+  authState,
+}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Responsive breakpoints for different screen sizes
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
-
-  const { authState } = useUser();
-
-  useEffect(() => {
-    if (!isPaused && timeLeft > 0) {
-      const timer = setInterval(() => setTimeLeft(prev => prev > 0 ? prev - 1 : 0), 1000);
-      return () => clearInterval(timer);
-    }
-  }, [timeLeft, isPaused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -96,19 +148,18 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
     };
   }, []);
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
-
-  const toggleDrawer = (open) => (event) => {
+  const toggleDrawer = useCallback((open) => (event) => {
     if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) return;
-    if (onMenuClick) {
-      onMenuClick();
-    } else {
-      setMobileOpen(open);
-    }
+    setMobileOpen(open);
+  }, []);
+
+  const handleQuestionSelect = (questionNumber) => {
+      if (onQuestionSelect) {
+          onQuestionSelect(questionNumber);
+      }
+      if (isMobile || isTablet) {
+          setMobileOpen(false);
+      }
   };
 
   const toggleFullScreen = () => {
@@ -119,41 +170,38 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
     }
   };
 
-  // ✅ REMOVED: The hardcoded sections array is no longer needed.
-
-  // ✅ NEW: This function will be called when a user clicks a section button.
   const handleSectionButtonClick = (section) => {
     if (onSectionClick) {
-      // Pass the STARTING question number of the section.
       onSectionClick(section.start);
     }
   };
 
+  const renderUserProfile = () => {
+    const user = authState?.user;
+    if (!user) return null;
 
-  // Render functions for drawer content (no changes needed here)
-  const renderUserProfile = () => (
-    <Box sx={{
-      p: 2,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      borderBottom: `1px solid ${theme.palette.divider}`
-    }}>
-      <Avatar
-        src={authState.user?.image}
-        alt={authState.user?.name}
-        sx={{ width: 60, height: 60, bgcolor: 'primary.main', mb: 1, fontSize: '24px', fontWeight: 'bold' }}
-      >
-        {!authState.user?.image && authState.user?.name?.[0]}
-      </Avatar>
-      <Typography variant="subtitle1" fontWeight={600}>
-        {authState.user?.name || 'Guest User'}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {authState.user?.school || ''}
-      </Typography>
-    </Box>
-  );
+    return (
+      <Box sx={{
+        p: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        borderBottom: `1px solid ${theme.palette.divider}`
+      }}>
+        <Avatar
+          src={user?.image}
+          alt={user?.name}
+          sx={{ width: 60, height: 60, bgcolor: 'primary.main', mb: 1, fontSize: '24px', fontWeight: 'bold' }}
+        >
+          {!user?.image && user?.name?.[0]}
+        </Avatar>
+        <Typography variant="subtitle1" fontWeight={600}>
+          {user?.name || 'Guest User'}
+        </Typography>
+        
+      </Box>
+    );
+  };
 
   const renderQuestionStatusLegend = () => (
     <Box sx={{
@@ -166,12 +214,11 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
       gap: 1
     }}>
       {[
-        { label: 'Answered', color: 'success.main' },
-        { label: 'Marked', color: 'info.main' },
-        { label: 'Not Visited', color: 'grey.300' },
-        { label: 'Answered & Marked', color: 'warning.main' },
-        { label: 'Not Answered', color: 'error.main' },
-        { label: 'Partially Answered', color: 'primary.main' },
+        { label: 'Answered', color: statusColors['answered'] },
+        { label: 'Review', color: statusColors['marked'] },
+        { label: 'Not Answered', color: statusColors['not-visited'] },
+        { label: 'Answer&Review', color: statusColors['answered-marked'] },
+   
       ].map((item, idx) => (
         <Box key={idx} sx={{
           display: 'flex',
@@ -199,66 +246,30 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
         Question Palette
       </Typography>
       <Grid container spacing={1}>
-        {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
-          <Grid item xs={2} key={num}>
-            <Box sx={{
-              width: '38px',
-              height: '38px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${theme.palette.divider}`,
-              borderRadius: '4px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              backgroundColor: theme.palette.grey[200],
-              '&:hover': { backgroundColor: theme.palette.grey[300] }
-            }}>
-              {num}
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
+        {questions.map((q, index) => {
+          const questionNumber = index + 1;
+          const isCurrent = currentQuestionNumber === questionNumber;
+          const status = questionStatus[q.id] || 'not-visited';
 
-  const renderSpeedIndicators = () => (
-    <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-      <Typography variant="subtitle2" gutterBottom>Speed Indicators</Typography>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-        {[
-          { icon: <Bolt fontSize="small" />, label: 'Fast' },
-          { icon: <Timer fontSize="small" />, label: 'Medium' },
-          { icon: <HourglassEmpty fontSize="small" />, label: 'Slow' },
-          { icon: <Block fontSize="small" />, label: 'Not Rated' },
-        ].map((item, index) => (
-          <Box key={index} sx={{
-            backgroundColor: theme.palette.grey[200],
-            p: 1,
-            borderRadius: "4px",
-            fontSize: "12px",
-            color: theme.palette.text.secondary,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "5px",
-            minHeight: "60px",
-            flex: 1
-          }}>
-            {item.icon}
-            <span>{item.label}</span>
-          </Box>
-        ))}
-      </Box>
+          return (
+            <Grid item xs={2} key={q.id || index}>
+              <QuestionNumBox
+                $current={isCurrent}
+                status={status}
+                onClick={() => handleQuestionSelect(questionNumber)}
+              >
+                {questionNumber}
+              </QuestionNumBox>
+            </Grid>
+          );
+        })}
+      </Grid>
     </Box>
   );
 
   const renderSidebarButtons = () => (
     <Box sx={{ mt: 'auto', p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-      <Button variant="contained" color="warning" fullWidth sx={{ mb: 1 }}>
-        View Question Paper
-      </Button>
+      
       <Button
         variant="contained"
         sx={{
@@ -279,18 +290,29 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      overflowY: 'auto'
     }}
-      role="presentation">
+    role="presentation">
+      <Box sx={{ p: 2, display: { md: 'none' } }}>
+          <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+          }}>
+              <Typography variant="h6" fontWeight={600}>
+                  Question Status
+              </Typography>
+              <IconButton onClick={toggleDrawer(false)} sx={{ display: { md: 'none' } }}>
+                  <ArrowBack />
+              </IconButton>
+          </Box>
+      </Box>
       {renderUserProfile()}
       {renderQuestionStatusLegend()}
-      {renderQuestionPalette()}
-      {renderSpeedIndicators()}
+      {questions.length > 0 && renderQuestionPalette()}
       {renderSidebarButtons()}
     </Box>
   );
 
-  // Determine layout based on screen size
   const showCompactLayout = isMobile || isTablet;
 
   return (
@@ -306,7 +328,6 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
             py: { xs: 1, md: 0 }
           }}>
 
-            {/* Left Side - Menu and Sections */}
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
@@ -326,7 +347,6 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                 </IconButton>
               )}
 
-              {/* ✅ UPDATED: Dynamic sections for Desktop */}
               {isDesktop && (
                 <>
                   <Button variant="contained" sx={{ bgcolor: 'grey.700', color: 'white' }}>
@@ -336,11 +356,9 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                     {sections.map((section) => (
                       <Button
                         key={section.name}
-                        // ✅ Highlight the current section
                         variant={currentSectionName === section.name ? 'contained' : 'outlined'}
                         size="small"
                         sx={{ fontSize: '0.75rem' }}
-                        // ✅ Add click handler
                         onClick={() => handleSectionButtonClick(section)}
                       >
                         {section.name}
@@ -350,7 +368,6 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                 </>
               )}
 
-              {/* ✅ UPDATED: Dynamic sections for Mobile/Tablet */}
               {showCompactLayout && (
                 <Box sx={{
                   display: 'flex',
@@ -376,14 +393,12 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                   {sections.map((section) => (
                     <Button
                       key={section.name}
-                       // ✅ Highlight the current section
                       variant={currentSectionName === section.name ? 'contained' : 'outlined'}
                       size="small"
                       sx={{
                         flexShrink: 0,
                         fontSize: '0.75rem'
                       }}
-                       // ✅ Add click handler
                       onClick={() => handleSectionButtonClick(section)}
                     >
                       {section.name}
@@ -393,28 +408,28 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
               )}
             </Box>
 
-            {/* Right Side - Timer and Controls */}
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
               gap: { xs: 1, sm: 2 },
-              flexShrink: 0
+              flexShrink: 0,
             }}>
-              {/* Timer */}
+
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <AccessTime sx={{
                   mr: { xs: 0.5, sm: 1 },
-                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                  color: timerColor,
                 }} />
                 <Typography variant="h6" sx={{
                   fontSize: { xs: '1rem', sm: '1.25rem' },
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  color: timerColor,
                 }}>
-                  {formatTime(timeLeft)}
+                  {timeDisplay}
                 </Typography>
               </Box>
 
-              {/* Control Buttons */}
               <ResponsiveButton
                 icon={<Fullscreen />}
                 text={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
@@ -422,25 +437,16 @@ const Header2 = ({ onMenuClick, sections = [], currentSectionName, onSectionClic
                 hideTextAt="lg"
                 sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
               />
-
-              <ResponsiveButton
-                icon={isPaused ? <PlayArrow /> : <Pause />}
-                text={isPaused ? 'Resume' : 'Pause'}
-                onClick={() => setIsPaused(!isPaused)}
-                hideTextAt="lg"
-                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-              />
             </Box>
           </Toolbar>
         </AppBar>
 
-        {/* Mobile Drawer */}
         <Drawer
           anchor="left"
           open={mobileOpen}
           onClose={toggleDrawer(false)}
           ModalProps={{ keepMounted: true }}
-          sx={{ '& .MuiDrawer-paper': { width: 310, boxSizing: 'border-box' } }}
+          sx={{ '& .MuiDrawer-paper': { width: 280, boxSizing: 'border-box' } }}
         >
           {drawerContent}
         </Drawer>

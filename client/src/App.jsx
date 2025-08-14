@@ -22,11 +22,10 @@ function App() {
         element: <Page1 />,
         errorElement: <ErrorPage />,
       },
-      {
-        path: "/page2",
+        {
+        path: "/page2/:paperId",
         element: <Page2 />,
       },
-      
       {
         path: "/page3/:paperId",
         element: <Page3 />,
@@ -44,7 +43,7 @@ function App() {
         element: <Page6 />,
       },
       {
-        path: "/page7",
+        path: "/select-test",
         element: <Page7 />,
       },
     ],
