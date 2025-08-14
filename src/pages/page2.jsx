@@ -6,7 +6,7 @@ import {
   Select, Button, FormControlLabel, Checkbox, useTheme,
   CssBaseline, ThemeProvider, CircularProgress, Alert
 } from "@mui/material";
-import Header from "../components/header";
+import Header from '../components/header'
 import { useUser } from "../context/UserContext";
 
 const Scroll = styled(Box)(({ theme }) => ({
@@ -47,7 +47,7 @@ const generateInstructions = (details) => {
     dynamicInstructions.push(`This test contains 1 section and a total of ${totalQuestions} questions.`);
   }
 
- 
+  
   dynamicInstructions.push(`The total duration for the test is ${details.duration || 'N/A'} minutes.`);
 
   
@@ -68,7 +68,7 @@ const generateInstructions = (details) => {
     dynamicInstructions.push(additionalInstructions);
   }
 
-  // Add parsedSections to the return for nested rendering
+  
   return {
     title: `Instructions for ${details.name}`,
     instructions: dynamicInstructions,
@@ -239,11 +239,10 @@ const Page2 = () => {
                 index === 0 ? (
                   <React.Fragment key={index}>
                     <Typography component="li">{item}</Typography>
-                    {/* Section summary lines go here, right after the first instruction */}
                     {Array.isArray(displayText.parsedSections) && displayText.parsedSections.length > 0 && (
                       <Box sx={{ mt: 1, mb: 1 }}>
                         {displayText.parsedSections.map((section, idx) => (
-                          <Typography key={idx} variant="body1" sx={{ mb: 1, color: 'text.primary', pl: 2 }}>
+                          <Typography key={idx} variant="body1" sx={{ mb: 1, pl: 2,  }}>
                             {section.name}: Question {section.start} to question {section.end}. All questions are mandatory. No negative marking.
                           </Typography>
                         ))}
@@ -290,17 +289,17 @@ const Page2 = () => {
             </Box>
 
 
-              <Box sx={{ mt: 4, flexGrow: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "text.primary" }}>
-                  {displayText.declaration}
-                </Typography>
-                <FormControlLabel
-                  control={<Checkbox checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />}
-                  label={<Typography variant="body2" color="text.secondary">{displayText.declarationText}</Typography>}
-                  sx={{ alignItems: "flex-start", m: 0 }}
-                />
-              </Box>
+            <Box sx={{ mt: 4, flexGrow: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "text.primary" }}>
+                {displayText.declaration}
+              </Typography>
+              <FormControlLabel
+                control={<Checkbox checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />}
+                label={<Typography variant="body2" color="text.secondary">{displayText.declarationText}</Typography>}
+                sx={{ alignItems: "flex-start", m: 0 }}
+              />
             </Box>
+          </Box>
         </Box>
         <Box sx={{ 
             position: "sticky", 
