@@ -1,4 +1,4 @@
-// page5.jsx
+// page5.jsx (Corrected with a Full-Screen Centering Wrapper)
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "../context/UserContext";
@@ -18,11 +18,11 @@ import {
 } from "@mui/material";
 import { CheckCircleOutline, CancelOutlined } from "@mui/icons-material";
 import { styled, createTheme, ThemeProvider } from "@mui/material/styles";
-import Header from "../components/header"; 
 
 const theme = createTheme({
   palette: {
     primary: { main: "#2196F3" },
+    secondary: { main: "#6c757d" },
     success: { main: "#4CAF50" },
     error: { main: "#f44336" },
   },
@@ -31,21 +31,14 @@ const theme = createTheme({
   },
 });
 
-const ResultContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  margin: "80px auto",
-  maxWidth: "900px",
-  backgroundColor: theme.palette.background.paper,
-  boxShadow: theme.shadows[3],
-  borderRadius: theme.shape.borderRadius,
-}));
-
 const StyledListItem = styled(ListItem)(({ theme, correct }) => ({
   borderLeft: `5px solid ${
     correct ? theme.palette.success.main : theme.palette.error.main
   }`,
   marginBottom: theme.spacing(2),
-  backgroundColor: correct ? "rgba(76, 175, 80, 0.1)" : "rgba(244, 67, 54, 0.1)",
+  backgroundColor: correct
+    ? "rgba(76, 175, 80, 0.08)"
+    : "rgba(244, 67, 54, 0.08)",
   "& .MuiListItemIcon-root": {
     minWidth: "40px",
   },
@@ -54,7 +47,8 @@ const StyledListItem = styled(ListItem)(({ theme, correct }) => ({
 const Page5 = () => {
   const { paperId } = useParams();
   const navigate = useNavigate();
-  const { authState } = useUser();
+  const { authState, setAuthState } = useUser();
+
   const [questions, setQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState({});
   const [loading, setLoading] = useState(true);
@@ -81,7 +75,6 @@ const Page5 = () => {
     setLoading(true);
     setError(null);
     try {
-      
       const questionsRes = await api.get(`/questions/${paperId}`);
       const fetchedQuestions = questionsRes.data.map((q) => ({
         ...q,
@@ -92,16 +85,13 @@ const Page5 = () => {
       }));
       setQuestions(fetchedQuestions);
 
-    
       const storedAnswers = JSON.parse(localStorage.getItem('userAnswers') || '{}');
       setUserAnswers(storedAnswers);
 
-     
       let calculatedScore = 0;
       fetchedQuestions.forEach((q) => {
         const userAnswer = storedAnswers[q.id];
         const correctAnswer = stripHTML(q.answers[0]);
-        
         if (userAnswer && stripHTML(userAnswer) === correctAnswer) {
           calculatedScore += 1;
         }
@@ -113,6 +103,7 @@ const Page5 = () => {
       console.error("Error fetching results:", e);
     } finally {
       setLoading(false);
+      localStorage.removeItem('userAnswers');
     }
   }, [api, paperId, stripHTML]);
 
@@ -121,6 +112,12 @@ const Page5 = () => {
       fetchResults();
     }
   }, [authState, paperId, fetchResults]);
+
+  const handleRetry = () => {
+    setAuthState(null);
+     navigate(`/page3/${paperId}`)
+  };
+
 
   if (loading) {
     return (
@@ -140,38 +137,39 @@ const Page5 = () => {
 
   return (
     <ThemeProvider theme={theme}>
+      {/* THIS IS THE NEW FULL-SCREEN WRAPPER */}
       <Box sx={{
-        minHeight: "100vh",
-        minWidth:'90vw',
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        bgcolor: "grey.100",
-        px: { xs: 2, sm: 4 },
-      }}>
+          position: 'fixed',    // Use fixed positioning to ignore parent elements
+          top: 0,
+          left: 0,
+          width: '100%',        // Cover the full screen width
+          height: '100%',       // Cover the full screen height
+          overflowY: 'auto',    // Allow scrolling if content is long
+          bgcolor: 'grey.100',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start', // Align to top, with padding pushing it down
+          p: { xs: 2, sm: 4 },     // Padding for spacing from screen edges
+          boxSizing: 'border-box' // Ensure padding is included in the dimensions
+        }}>
         <Paper
           elevation={6}
           sx={{
             width: "100%",
-            maxWidth: 500,
+            maxWidth: 800,
+            // We no longer need margins (`mx`) as the parent Box is handling the centering
             p: { xs: 2, sm: 4 },
             borderRadius: 4,
-            boxShadow: 6,
             background: "linear-gradient(135deg, #e3f2fd 0%, #fff 100%)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
           }}
         >
           <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, color: "primary.main", mb: 2 }}>
             Test Result
           </Typography>
-          {loading && (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress color="primary" size={40} />
-            </Box>
-          )}
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Typography variant="h6" align="center" gutterBottom sx={{ mb: 4 }}>
+            You scored: {score} / {questions.length}
+          </Typography>
+
           {questions.length > 0 && (
             <>
               <List sx={{ width: "100%", bgcolor: "transparent" }}>
@@ -186,29 +184,30 @@ const Page5 = () => {
                       <ListItemText
                         primary={
                           <Typography fontWeight="bold">
-                            Question #{index + 1}
+                            Question #{index + 1}: {q.question}
                           </Typography>
                         }
                         secondary={
                           <Box sx={{ mt: 1 }}>
-                            <Typography variant="body1" sx={{mb: 1}} dangerouslySetInnerHTML={{ __html: q.question }}/>
                             {userAnswerText !== undefined ? (
-                                <Typography variant="body2" color={isCorrect ? "success.main" : "error.main"}>
-                                    Your Answer: {userAnswerText}
+                                <Typography variant="body2" color={isCorrect ? "text.primary" : "error.main"}>
+                                  <b>Your Answer:</b> {userAnswerText}
                                 </Typography>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    You did not answer this question.
+                                  <b>You did not answer this question.</b>
                                 </Typography>
                             )}
                             {!isCorrect && (
                                 <Typography variant="body2" color="success.main">
-                                    Correct Answer: {correctAnswerText}
+                                  <b>Correct Answer:</b> {correctAnswerText}
                                 </Typography>
                             )}
-                            <Box sx={{mt:2}}>
-                                <Typography variant="body2" color="text.secondary" dangerouslySetInnerHTML={{ __html: q.explanation }} />
-                            </Box>
+                            {q.explanation && (
+                              <Box >
+                                <Typography variant="body2" color="text.secondary" dangerouslySetInnerHTML={{ __html: `<b>Explanation:</b> ${q.explanation}` }} />
+                              </Box>
+                            )}
                           </Box>
                         }
                       />
@@ -216,9 +215,13 @@ const Page5 = () => {
                   );
                 })}
               </List>
-              <Box sx={{mt: 4, textAlign: 'center'}}>
-                <Button variant="contained" onClick={() => navigate('/')}>
-                    Summary
+
+              <Box sx={{mt: 4, display: 'flex', gap: 2, justifyContent: 'center'}}>
+                <Button variant="contained" color="secondary" onClick={() => navigate('/page4')}>
+                  View Summary
+                </Button>
+                <Button variant="contained" color="primary" onClick={handleRetry}>
+                  Retry Test
                 </Button>
               </Box>
             </>
