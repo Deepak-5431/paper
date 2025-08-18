@@ -182,13 +182,7 @@ const Page5 = () => {
                   
                   return (
                     <StyledListItem key={q.id} correct={isCorrect}>
-                      <ListItemIcon>
-                        {isCorrect ? (
-                          <CheckCircleOutline color="success" />
-                        ) : (
-                          <CancelOutlined color="error" />
-                        )}
-                      </ListItemIcon>
+                      
                       <ListItemText
                         primary={
                           <Typography fontWeight="bold">

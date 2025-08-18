@@ -83,24 +83,24 @@ const StyledContainer = styled(Box)(({ theme }) => ({
 const MainContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexGrow: 1,
-  height: "auto", // Changed from 'calc(100vh - 70px)'
+  height: "auto", 
   marginBottom: "70px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    height: "auto", // Changed from '100vh'
+    height: "auto", 
     marginBottom: 0,
   },
 }));
 
 const LeftPanel = styled(Box)(({ theme }) => ({
-  width: "1200px", // Keep your reduced width
+  width: "1200px", 
   flexShrink: 0,
   backgroundColor: theme.palette.background.paper,
   borderRight: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  height: "auto", // Changed from '100%' to 'auto'
-  minHeight: "fit-content", // Added to fit its content
+  height: "auto", 
+  minHeight: "fit-content", 
   overflow: "hidden",
   position: "relative",
   zIndex: 1,
@@ -339,7 +339,7 @@ const QuestionStatusLegend = React.memo(() => (
     ))}
   </Box>
 ));
-const SidebarButtons = React.memo(() => (
+const SidebarButtons = React.memo(({ navigate, paperId }) => (
   <Box
     sx={{
       mt: "auto",
@@ -353,10 +353,13 @@ const SidebarButtons = React.memo(() => (
   >
     <Button
       variant="contained"
+      onClick={()=>navigate(`/page2/${paperId}`)}
+      //`/questions/${paperId}`
       sx={{
         backgroundColor: "grey.300",
         color: "text.primary",
         "&:hover": { backgroundColor: "grey.400" },
+         
       }}
       fullWidth
     >
@@ -575,7 +578,7 @@ const Page3 = () => {
   }, []);
    
   const saveAnswersLocally = useCallback(() => {
-        // You should not store sensitive data in localStorage. This is for demonstration only.
+        
         localStorage.setItem('userAnswers', JSON.stringify(answers));
     }, [answers]);
 
@@ -810,7 +813,6 @@ const Page3 = () => {
         setLoading(true);
 
         try {
-            // Save the user's answers to local storage before submitting
             saveAnswersLocally();
 
             const answeredOptionText = answers[currentQuestion.id];
@@ -830,14 +832,15 @@ const Page3 = () => {
             console.log("Final submission successful. Navigating to results page.");
 
             setIsTestCompleted(true);
-            navigate(`/page5/${paperId}`); // Navigate to Page5
+            
+            navigate(`/result/${paperId}`);
         } catch (e) {
             console.error("Submission failed:", e);
             setError(`Failed to submit test. Server says: ${e.response?.data?.message || e.message}`);
         } finally {
             setLoading(false);
         }
-    }, [api, paperId, answers, currentQuestion, navigate, setIsTestCompleted, setError, setLoading, saveAnswersLocally]);
+  }, [api, paperId, answers, currentQuestion, navigate, setIsTestCompleted, setError, setLoading, saveAnswersLocally, setAuthState]);
 
   const fetchAllData = useCallback(async () => {
     if (!authState?.accessToken) {
@@ -1077,7 +1080,7 @@ const Page3 = () => {
                   navigateToQuestion={navigateToQuestion}
                 />
               </Box>
-              <SidebarButtons />
+              <SidebarButtons navigate={navigate} paperId={paperId}/>
             </RightSidebar>
           </MainContainer>
 
@@ -1273,7 +1276,7 @@ const Page3 = () => {
                   onClick={() => setSubmitModalOpen(false)}
                   sx={{ minWidth: 100 }}
                 >
-                  Cancel
+                  Retry
                 </Button>
                 <Button
                   variant="contained"

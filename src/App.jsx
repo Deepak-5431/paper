@@ -35,7 +35,7 @@ function App() {
         element: <Page4 />,
       },
       {
-        path: "/page5/:paperId",
+        path: "/result/:paperId",
         element: <Page5 />,
       },
       {
