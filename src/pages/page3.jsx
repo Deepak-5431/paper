@@ -573,6 +573,11 @@ const Page3 = () => {
       .replace(/<\/?([^>]+)>/g, "")
       .trim();
   }, []);
+   
+  const saveAnswersLocally = useCallback(() => {
+        // You should not store sensitive data in localStorage. This is for demonstration only.
+        localStorage.setItem('userAnswers', JSON.stringify(answers));
+    }, [answers]);
 
   const parseSections = useCallback((sectionsString) => {
     if (!sectionsString) return [];
@@ -800,54 +805,39 @@ const Page3 = () => {
 
   const handleSubmitTest = useCallback(() => setSubmitModalOpen(true), []);
 
-  const confirmSubmit = useCallback(async () => {
-    setSubmitModalOpen(false);
-    setLoading(true);
-    console.log("[Final Submission] Starting the process to submit the test.");
+      const confirmSubmit = useCallback(async () => {
+        setSubmitModalOpen(false);
+        setLoading(true);
 
-    try {
-      const answeredOptionText = answers[currentQuestion.id];
-      const optionIndex =
-        answeredOptionText !== undefined
-          ? currentQuestion.options.indexOf(answeredOptionText)
-          : -1;
+        try {
+            // Save the user's answers to local storage before submitting
+            saveAnswersLocally();
 
-      const payload = {
-        data: currentQuestion.qid,
-        response: optionIndex !== -1 ? String(optionIndex) : "",
-      };
+            const answeredOptionText = answers[currentQuestion.id];
+            const optionIndex = answeredOptionText !== undefined
+                ? currentQuestion.options.indexOf(answeredOptionText)
+                : -1;
 
-      console.log(
-        "[Final Submission] Submitting the last answer and finalizing the test.",
-        payload
-      );
-      const submitEndpoint = `/testpaper/questions/${paperId}?isSubmit=1`;
-      await api.post(submitEndpoint, payload);
+            const payload = {
+                data: currentQuestion.qid,
+                response: optionIndex !== -1 ? String(optionIndex) : ""
+            };
+            
+            console.log("Payload sent to API on final submission:", payload);
+            const submitEndpoint = `/testpaper/questions/${paperId}?isSubmit=1`;
+            await api.post(submitEndpoint, payload);
 
-      console.log("Final submission successful. Navigating to results page.");
+            console.log("Final submission successful. Navigating to results page.");
 
-      setIsTestCompleted(true);
-      navigate(`/page4/`);
-    } catch (e) {
-      console.error("Submission failed:", e);
-      setError(
-        `Failed to submit test. Server says: ${
-          e.response?.data?.message || e.message
-        }`
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    api,
-    paperId,
-    answers,
-    currentQuestion,
-    navigate,
-    setIsTestCompleted,
-    setError,
-    setLoading,
-  ]);
+            setIsTestCompleted(true);
+            navigate(`/page5/${paperId}`); // Navigate to Page5
+        } catch (e) {
+            console.error("Submission failed:", e);
+            setError(`Failed to submit test. Server says: ${e.response?.data?.message || e.message}`);
+        } finally {
+            setLoading(false);
+        }
+    }, [api, paperId, answers, currentQuestion, navigate, setIsTestCompleted, setError, setLoading, saveAnswersLocally]);
 
   const fetchAllData = useCallback(async () => {
     if (!authState?.accessToken) {
