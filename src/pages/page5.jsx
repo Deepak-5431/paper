@@ -1,6 +1,5 @@
-// page5.jsx (Corrected with a Full-Screen Centering Wrapper)
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import  { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "../context/UserContext";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -16,7 +15,6 @@ import {
   ListItemText,
   ListItemIcon,
 } from "@mui/material";
-import { CheckCircleOutline, CancelOutlined } from "@mui/icons-material";
 import { styled, createTheme, ThemeProvider } from "@mui/material/styles";
 
 const theme = createTheme({
@@ -102,8 +100,7 @@ const Page5 = () => {
       setError(e.response?.data?.message || "Failed to fetch results.");
       console.error("Error fetching results:", e);
     } finally {
-      setLoading(false);
-      localStorage.removeItem('userAnswers');
+      setLoading(false); 
     }
   }, [api, paperId, stripHTML]);
 
@@ -137,27 +134,27 @@ const Page5 = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      {/* THIS IS THE NEW FULL-SCREEN WRAPPER */}
+      
       <Box sx={{
-          position: 'fixed',    // Use fixed positioning to ignore parent elements
+          position: 'fixed',    
           top: 0,
           left: 0,
-          width: '100%',        // Cover the full screen width
-          height: '100%',       // Cover the full screen height
-          overflowY: 'auto',    // Allow scrolling if content is long
+          width: '100%',        
+          height: '100%',       
+          overflowY: 'auto',    
           bgcolor: 'grey.100',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'flex-start', // Align to top, with padding pushing it down
-          p: { xs: 2, sm: 4 },     // Padding for spacing from screen edges
-          boxSizing: 'border-box' // Ensure padding is included in the dimensions
+          alignItems: 'flex-start', 
+          p: { xs: 2, sm: 4 },     
+          boxSizing: 'border-box' 
         }}>
         <Paper
           elevation={6}
           sx={{
             width: "100%",
             maxWidth: 800,
-            // We no longer need margins (`mx`) as the parent Box is handling the centering
+            
             p: { xs: 2, sm: 4 },
             borderRadius: 4,
             background: "linear-gradient(135deg, #e3f2fd 0%, #fff 100%)",
@@ -217,7 +214,15 @@ const Page5 = () => {
               </List>
 
               <Box sx={{mt: 4, display: 'flex', gap: 2, justifyContent: 'center'}}>
-                <Button variant="contained" color="secondary" onClick={() => navigate('/page4')}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => {
+                    setAuthState(null);
+                    localStorage.removeItem('authState');
+                    navigate('/page4');
+                  }}
+                >
                   View Summary
                 </Button>
                 <Button variant="contained" color="primary" onClick={handleRetry}>

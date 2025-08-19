@@ -578,9 +578,25 @@ const Page3 = () => {
   }, []);
    
   const saveAnswersLocally = useCallback(() => {
-        
-        localStorage.setItem('userAnswers', JSON.stringify(answers));
-    }, [answers]);
+    try {
+      localStorage.setItem('userAnswers', JSON.stringify(answers));
+      // persist question statuses and questions so result pages can work offline
+      localStorage.setItem('questionStatus', JSON.stringify(questionStatus));
+      localStorage.setItem('questions', JSON.stringify(questions));
+      if (paperId) {
+        localStorage.setItem('currentPaperId', String(paperId));
+      }
+    } catch (err) {
+      console.error('Failed to save locally:', err);
+    }
+  }, [answers, questionStatus, questions, paperId]);
+
+  // Auto-save answers/status/questions to localStorage whenever they change
+  useEffect(() => {
+    // debounce a little to avoid excessive writes
+    const t = setTimeout(() => saveAnswersLocally(), 300);
+    return () => clearTimeout(t);
+  }, [answers, questionStatus, questions, saveAnswersLocally]);
 
   const parseSections = useCallback((sectionsString) => {
     if (!sectionsString) return [];
@@ -815,6 +831,9 @@ const Page3 = () => {
         try {
             saveAnswersLocally();
 
+             localStorage.setItem('questionStatuses', JSON.stringify(questionStatus));
+
+
             const answeredOptionText = answers[currentQuestion.id];
             const optionIndex = answeredOptionText !== undefined
                 ? currentQuestion.options.indexOf(answeredOptionText)
@@ -842,70 +861,75 @@ const Page3 = () => {
         }
   }, [api, paperId, answers, currentQuestion, navigate, setIsTestCompleted, setError, setLoading, saveAnswersLocally, setAuthState]);
 
-  const fetchAllData = useCallback(async () => {
-    if (!authState?.accessToken) {
-      setError("Authentication required. Please log in to take the test.");
-      setLoading(false);
-      return;
+// In Page3.jsx
+
+const fetchAllData = useCallback(async () => {
+  if (!authState?.accessToken) {
+    setError("Authentication required. Please log in to take the test.");
+    setLoading(false);
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const [testPaperRes, questionsRes] = await Promise.all([
+      api.get(`/testpaper/${paperId}`),
+      api.get(`/questions/${paperId}`),
+    ]);
+
+    const testPaperData = testPaperRes.data;
+    const fetchedQuestionsData = questionsRes.data;
+
+    // This part is the same
+    const parsedSections = testPaperData.sections
+        ? parseSections(testPaperData.sections)
+        : [{ name: "All Questions", start: 1, end: testPaperData.questions || 0 }];
+    
+    setSections(parsedSections);
+    
+    if (testPaperData.duration) {
+        setTimeLeft(testPaperData.duration * 60);
     }
+    
+    if (Array.isArray(fetchedQuestionsData)) {
+        // --- THIS IS THE NEW LOGIC TO ADD SECTION NAMES ---
+        const questionsWithSections = fetchedQuestionsData.map((q, index) => {
+            const questionNumber = index + 1;
+            const section = parsedSections.find(sec => 
+                questionNumber >= sec.start && questionNumber <= sec.end
+            );
+            
+            return {
+                ...q,
+                question: stripHTML(q.question),
+                options: (q.options || [])
+                    .map((opt) => stripHTML(opt))
+                    .filter((opt) => opt && opt.trim() !== ""),
+                // Assign the found section name, or a default
+                section: section ? section.name : 'General' 
+            };
+        });
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [testPaperRes, questionsRes] = await Promise.all([
-        api.get(`/testpaper/${paperId}`),
-        api.get(`/questions/${paperId}`),
-      ]);
-
-      const testPaperData = testPaperRes.data;
-      const possibleData = questionsRes.data;
-
-      if (testPaperData) {
-        const parsedSections = testPaperData.sections
-          ? parseSections(testPaperData.sections)
-          : [
-              {
-                name: "All Questions",
-                start: 1,
-                end: testPaperData.questions || 0,
-              },
-            ];
-        setSections(parsedSections);
-
-        if (testPaperData.duration) {
-          setTimeLeft(testPaperData.duration * 60);
-        }
-      }
-
-      if (Array.isArray(possibleData)) {
-        const fetchedQuestions = possibleData.map((q) => ({
-          ...q,
-          question: stripHTML(q.question),
-          options: (q.options || [])
-            .map((opt) => stripHTML(opt))
-            .filter((opt) => opt && opt.trim() !== ""),
-        }));
-
-        setQuestions(fetchedQuestions);
+        setQuestions(questionsWithSections); // Set the updated questions array
 
         const initialStatus = {};
-        fetchedQuestions.forEach((q) => {
-          initialStatus[q.id] = "not-visited";
+        questionsWithSections.forEach((q) => {
+            initialStatus[q.id] = "not-visited";
         });
-        if (fetchedQuestions.length > 0) {
-          initialStatus[fetchedQuestions[0].id] = "not-answered";
+        if (questionsWithSections.length > 0) {
+            initialStatus[questionsWithSections[0].id] = "not-answered";
         }
         setQuestionStatus(initialStatus);
-      }
-    } catch (e) {
-      const errorMessage =
-        e.response?.data?.message || e.message || "Failed to fetch test data.";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  }, [api, paperId, authState?.accessToken, stripHTML, parseSections]);
+  } catch (e) {
+    const errorMessage = e.response?.data?.message || e.message || "Failed to fetch test data.";
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+}, [api, paperId, authState?.accessToken, stripHTML, parseSections]);
 
   const saveTimeoutRef = useRef(null);
   useEffect(() => {

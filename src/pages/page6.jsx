@@ -1,4 +1,3 @@
-// Page6.jsx (Corrected with the forceful Full-Screen Wrapper)
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "../context/UserContext";
@@ -33,7 +32,6 @@ import {
 } from "@mui/icons-material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
-// Theme and StatCard component remain the same
 const theme = createTheme({
   palette: {
     primary: { main: "#2196F3" },
@@ -158,7 +156,7 @@ const Page6 = () => {
           left: 0,
           width: '100%',
           height: '100%',
-          overflowY: 'auto', // Make the entire page scrollable
+          overflowY: 'auto', 
           bgcolor: 'grey.100'
         }}>
         <AppBar position="static" elevation={2}>
@@ -178,7 +176,6 @@ const Page6 = () => {
         </AppBar>
 
         <Container component="main" maxWidth="lg" sx={{ py: 4 }}>
-          {/* Welcome Section */}
           <Paper elevation={3} sx={{ p: 4, mb: 4, background: "linear-gradient(135deg, #e3f2fd 0%, #fff 100%)" }}>
             <Typography variant="h3" gutterBottom sx={{ color: "primary.main" }}>
               Welcome back, {authState?.user?.name || "Student"}!
@@ -199,7 +196,6 @@ const Page6 = () => {
             </Box>
           </Paper>
 
-          {/* ... all other content (Stat Grids, Recent Tests, Action Buttons) remains exactly the same ... */}
            <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
@@ -299,7 +295,7 @@ const Page6 = () => {
                   variant="outlined"
                   fullWidth
                   startIcon={<Assessment />}
-                  onClick={() => navigate('/page4')}
+                  onClick={() => navigate('/select-test')}
                   sx={{ py: 1.5 }}
                 >
                   View Tests
