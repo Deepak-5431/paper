@@ -29,7 +29,9 @@ const theme = createTheme({
   },
 });
 
-const StyledListItem = styled(ListItem)(({ theme, correct }) => ({
+const StyledListItem = styled(ListItem, {
+  shouldForwardProp: (prop) => prop !== 'correct'
+})(({ theme, correct }) => ({
   borderLeft: `5px solid ${
     correct ? theme.palette.success.main : theme.palette.error.main
   }`,

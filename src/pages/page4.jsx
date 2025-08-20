@@ -1,3 +1,7 @@
+import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+
 import {
   Typography,
   Table,
@@ -9,8 +13,6 @@ import {
   Paper,
   Button,
   Box,
-  AppBar,
-  Toolbar,
   useMediaQuery,
   useTheme,
   CssBaseline
@@ -177,6 +179,15 @@ const theme = createTheme({
 });
 
 const Page4 = () => {  
+
+    const navigate = useNavigate();
+  const { logout } = useUser(); 
+
+    useEffect(() => {
+    console.log("Summary page loaded. Logging out and clearing storage...");
+    logout();
+  }, []);
+
   const tableData = [
     { section: 'General Intelligence and Reasoning', questions: 25, answered: 0, notAnswered: 8, markedForReview: 7, notVisited: 17 },
     { section: 'General Awareness', questions: 25, answered: 0, notAnswered: 9, markedForReview: 1, notVisited: 16 },
