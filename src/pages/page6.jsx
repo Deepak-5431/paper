@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -142,8 +141,11 @@ const Page6 = () => {
   }, [authState, fetchTestSummary]);
 
   const handleLogout = () => {
-    setAuthState(null);
-    window.location.href='/';
+    // Added confirmation before logging out
+    if (window.confirm("Are you sure you want to log out?")) {
+      setAuthState(null);
+      window.location.href = '/';
+    }
   };
 
   const completionPercentage = testSummary.totalTests > 0 ? (testSummary.completedTests / testSummary.totalTests) * 100 : 0;

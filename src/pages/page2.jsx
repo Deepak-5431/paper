@@ -6,7 +6,7 @@ import {
   Select, Button, FormControlLabel, Checkbox, useTheme,
   CssBaseline, ThemeProvider, CircularProgress, Alert
 } from "@mui/material";
-import Header from '../components/header'
+import Header from "../components/header";
 import { useUser } from "../context/UserContext";
 
 const Scroll = styled(Box)(({ theme }) => ({

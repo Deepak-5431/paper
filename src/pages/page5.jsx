@@ -1,5 +1,4 @@
-
-import  { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "../context/UserContext";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -13,7 +12,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
 } from "@mui/material";
 import { styled, createTheme, ThemeProvider } from "@mui/material/styles";
 
@@ -42,12 +40,15 @@ const StyledListItem = styled(ListItem, {
   "& .MuiListItemIcon-root": {
     minWidth: "40px",
   },
+  "& .MuiListItemText-root": {
+    wordBreak: "break-word",
+  }
 }));
 
 const Page5 = () => {
   const { paperId } = useParams();
   const navigate = useNavigate();
-  const { authState, setAuthState } = useUser();
+  const { authState } = useUser();
 
   const [questions, setQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState({});
@@ -67,42 +68,67 @@ const Page5 = () => {
   }, [authState]);
 
   const stripHTML = useCallback((html) => {
-    if (!html) return "";
-    return html.replace(/<img[^>]*>/gi, "").replace(/<\/?([^>]+)>/g, "").trim();
+    const inputAsString = String(html ?? '');
+    // This regex replaces all HTML tags (e.g., <br>, <strong>) with an empty string.
+    return inputAsString.replace(/<[^>]*>/g, '').trim();
   }, []);
 
   const fetchResults = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const questionsRes = await api.get(`/questions/${paperId}`);
-      const fetchedQuestions = questionsRes.data.map((q) => ({
-        ...q,
-        question: stripHTML(q.question),
-        options: (q.options || [])
-          .map((opt) => stripHTML(opt))
-          .filter((opt) => opt && opt.trim() !== ""),
-      }));
-      setQuestions(fetchedQuestions);
+        const questionsRes = await api.get(`/questions/${paperId}`);
+        const fetchedQuestions = questionsRes.data.map((q) => ({
+            ...q,
+            question: stripHTML(q.question),
+            options: (q.options || []).map((opt) => stripHTML(opt)),
+        }));
+        setQuestions(fetchedQuestions);
 
-      const storedAnswers = JSON.parse(localStorage.getItem('userAnswers') || '{}');
-      setUserAnswers(storedAnswers);
+        const storedAnswers = JSON.parse(localStorage.getItem('userAnswers') || '{}');
+        setUserAnswers(storedAnswers);
 
-      let calculatedScore = 0;
-      fetchedQuestions.forEach((q) => {
-        const userAnswer = storedAnswers[q.id];
-        const correctAnswer = stripHTML(q.answers[0]);
-        if (userAnswer && stripHTML(userAnswer) === correctAnswer) {
-          calculatedScore += 1;
-        }
-      });
-      setScore(calculatedScore);
+        let calculatedScore = 0;
+        fetchedQuestions.forEach((q) => {
+            const userAnswer = storedAnswers[q.id];
+            const correctAnswerText = q.answers && q.answers.length > 0 ? q.answers[0] : undefined;
+
+            if (userAnswer === undefined || correctAnswerText === undefined) {
+                return;
+            }
+
+            let isCorrect = false;
+
+            if (q.questionType === 'checkbox') {
+                if (Array.isArray(userAnswer)) {
+                    const userAnswerTexts = userAnswer.map(index => q.options[index]).sort();
+                    const correctAnswerTexts = correctAnswerText.split(',').map(item => item.trim()).sort();
+                    if (JSON.stringify(userAnswerTexts) === JSON.stringify(correctAnswerTexts)) {
+                        isCorrect = true;
+                    }
+                }
+            } else if (q.questionType === 'radio') {
+                const userAnswerText = q.options[userAnswer];
+                if (userAnswerText === correctAnswerText) {
+                    isCorrect = true;
+                }
+            } else {
+                if (String(userAnswer).trim() === String(correctAnswerText).trim()) {
+                    isCorrect = true;
+                }
+            }
+
+            if (isCorrect) {
+                calculatedScore += (q.marks?.positive || 1);
+            }
+        });
+        setScore(calculatedScore);
 
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to fetch results.");
-      console.error("Error fetching results:", e);
+        setError(e.message || "Failed to fetch results.");
+        console.error("Error fetching results:", e);
     } finally {
-      setLoading(false); 
+        setLoading(false);
     }
   }, [api, paperId, stripHTML]);
 
@@ -113,10 +139,8 @@ const Page5 = () => {
   }, [authState, paperId, fetchResults]);
 
   const handleRetry = () => {
-    setAuthState(null);
-     navigate(`/page3/${paperId}`)
+    navigate(`/page3/${paperId}`);
   };
-
 
   if (loading) {
     return (
@@ -130,38 +154,23 @@ const Page5 = () => {
     return (
       <Box sx={{ p: 4, textAlign: "center" }}>
         <Alert severity="error">{error}</Alert>
+        <Button onClick={fetchResults} sx={{ mt: 2 }}>Try Again</Button>
       </Box>
     );
   }
 
   return (
     <ThemeProvider theme={theme}>
-      
       <Box sx={{
-          position: 'fixed',    
-          top: 0,
-          left: 0,
-          width: '100%',        
-          height: '100%',       
-          overflowY: 'auto',    
-          bgcolor: 'grey.100',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-start', 
-          p: { xs: 2, sm: 4 },     
-          boxSizing: 'border-box' 
+          position: 'fixed', top: 0, left: 0, width: '100%',
+          height: '100%', overflowY: 'auto', bgcolor: 'grey.100',
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
+          p: { xs: 2, sm: 4 }, boxSizing: 'border-box'
         }}>
-        <Paper
-          elevation={6}
-          sx={{
-            width: "100%",
-            maxWidth: 800,
-            
-            p: { xs: 2, sm: 4 },
-            borderRadius: 4,
-            background: "linear-gradient(135deg, #e3f2fd 0%, #fff 100%)",
-          }}
-        >
+        <Paper elevation={6} sx={{
+            width: "100%", maxWidth: 800, p: { xs: 2, sm: 4 },
+            borderRadius: 4, background: "linear-gradient(135deg, #e3f2fd 0%, #fff 100%)",
+          }}>
           <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, color: "primary.main", mb: 2 }}>
             Test Result
           </Typography>
@@ -173,13 +182,30 @@ const Page5 = () => {
             <>
               <List sx={{ width: "100%", bgcolor: "transparent" }}>
                 {questions.map((q, index) => {
-                  const userAnswerText = userAnswers[q.id];
-                  const correctAnswerText = stripHTML(q.answers[0]);
-                  const isCorrect = userAnswerText ? stripHTML(userAnswerText) === correctAnswerText : false;
+                  const userAnswer = userAnswers[q.id];
+                  const correctAnswerText = q.answers && q.answers.length > 0 ? q.answers[0] : "N/A";
                   
+                  let isCorrect = false;
+                  let displayUserAnswer = "Not Answered";
+
+                  if (userAnswer !== undefined && correctAnswerText) {
+                    if (q.questionType === 'checkbox' && Array.isArray(userAnswer)) {
+                        const userAnswerTexts = userAnswer.map(i => q.options[i]).sort();
+                        const correctAnswerTexts = correctAnswerText.split(',').map(item => item.trim()).sort();
+                        if (JSON.stringify(userAnswerTexts) === JSON.stringify(correctAnswerTexts)) isCorrect = true;
+                        displayUserAnswer = userAnswerTexts.join(', ');
+                    } else if (q.questionType === 'radio') {
+                        const userAnswerText = q.options[userAnswer];
+                        if (userAnswerText === correctAnswerText) isCorrect = true;
+                        displayUserAnswer = userAnswerText;
+                    } else {
+                        if (String(userAnswer).trim() === String(correctAnswerText).trim()) isCorrect = true;
+                        displayUserAnswer = String(userAnswer);
+                    }
+                  }
+
                   return (
                     <StyledListItem key={q.id} correct={isCorrect}>
-                      
                       <ListItemText
                         primary={
                           <Typography fontWeight="bold">
@@ -188,27 +214,24 @@ const Page5 = () => {
                         }
                         secondary={
                           <Box sx={{ mt: 1 }}>
-                            {userAnswerText !== undefined ? (
-                                <Typography variant="body2" color={isCorrect ? "text.primary" : "error.main"}>
-                                  <b>Your Answer:</b> {userAnswerText}
-                                </Typography>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  <b>You did not answer this question.</b>
-                                </Typography>
-                            )}
+                            <Typography variant="body2" color={isCorrect ? "text.primary" : "error.main"}>
+                              <b>Your Answer:</b> {displayUserAnswer || 'Not Answered'}
+                            </Typography>
                             {!isCorrect && (
-                                <Typography variant="body2" color="success.main">
-                                  <b>Correct Answer:</b> {correctAnswerText}
-                                </Typography>
+                              <Typography variant="body2" color="success.main">
+                                <b>Correct Answer:</b> {stripHTML(correctAnswerText)}
+                              </Typography>
                             )}
                             {q.explanation && (
-                              <Box >
-                                <Typography variant="body2" color="text.secondary" dangerouslySetInnerHTML={{ __html: `<b>Explanation:</b> ${q.explanation}` }} />
+                              <Box mt={1} p={1} bgcolor="grey.200" borderRadius={1}>
+                                <Typography variant="body2" color="text.secondary">
+                                  <b>Explanation:</b> {stripHTML(q.explanation)}
+                                </Typography>
                               </Box>
                             )}
                           </Box>
                         }
+                        secondaryTypographyProps={{ component: 'div' }}
                       />
                     </StyledListItem>
                   );
@@ -216,16 +239,9 @@ const Page5 = () => {
               </List>
 
               <Box sx={{mt: 4, display: 'flex', gap: 2, justifyContent: 'center'}}>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => {
-                    setAuthState(null);
-                    localStorage.removeItem('authState');
-                    navigate('/page4');
-                  }}
-                >
-                  View Summary
+                {/* THIS IS THE MODIFIED LINE */}
+                <Button variant="contained" color="secondary" onClick={() => navigate('/page4')}>
+                  Back to Dashboard
                 </Button>
                 <Button variant="contained" color="primary" onClick={handleRetry}>
                   Retry Test

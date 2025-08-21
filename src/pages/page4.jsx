@@ -136,7 +136,7 @@ const theme = createTheme({
         root: {
           marginBottom: '30px',
           overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch', // Fixed the kebab-case warning
+          WebkitOverflowScrolling: 'touch', 
         }
       }
     },
@@ -185,7 +185,8 @@ const Page4 = () => {
 
     useEffect(() => {
     console.log("Summary page loaded. Logging out and clearing storage...");
-    logout();
+    // Commented out logout to prevent unintended session clearing
+    // logout();
   }, []);
 
   const tableData = [
@@ -208,7 +209,7 @@ const Page4 = () => {
         flexDirection: 'column', 
         minHeight: '100vh', 
         width: '100%',
-        paddingTop: '60px' // Added padding to account for header
+        paddingTop: '60px' 
       }}>
         <Box sx={{
           flex: 1,  
@@ -221,7 +222,7 @@ const Page4 = () => {
           <Paper sx={{ 
             width: '100%', 
             maxWidth: '900px',
-            marginTop: { xs: '20px', sm: '40px' } // Adjusted margin for mobile
+            marginTop: { xs: '20px', sm: '40px' } 
           }}>
             <Typography 
               variant={isMobile ? "h5" : isTablet ? "h4" : "h3"} 
