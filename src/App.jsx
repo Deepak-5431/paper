@@ -30,10 +30,10 @@ function App() {
         path: "/page3/:paperId",
         element: <Page3 />,
       },
-      {
+      {/*
         path: "/page4",
         element: <Page4 />,
-      },
+      */},
       {
         path: "/result/:paperId",
         element: <Page5 />,
@@ -47,9 +47,7 @@ function App() {
         element: <Page7 />,
       },
     ],
-    {
-      basename: "/paper",
-    }
+    
   );
 
   return <RouterProvider router={router} />;
