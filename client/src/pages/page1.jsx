@@ -49,7 +49,7 @@ const Page1 = () => {
   const navigate = useNavigate();
   const { setAuthState } = useUser();
 
-  const [ setIsLoggedIn] = useState(false);
+  const [ isloggedin,setIsLoggedIn] = useState(false);
   const [loginOpen, setLoginOpen] = useState(true);
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -61,53 +61,53 @@ const Page1 = () => {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();  
-    setLoading(true);
-    setLoginError("");
+  e.preventDefault();  
+  setLoading(true);
+  setLoginError("");
 
-    try {
-      const payload = {
-        user: loginData.username,
-        password: loginData.password,
-        fcmId: "60",
-        androidVersion: "9",
-        androidVersionCode: "28",
-        appVersion: "1.0",
-        appVersionCode: "1"
+  try {
+    const payload = {
+      user: loginData.username,
+      password: loginData.password,
+      fcmId: "60",
+      androidVersion: "9",
+      androidVersionCode: "28",
+      appVersion: "1.0",
+      appVersionCode: "1"
+    };
+
+    const { data } = await axios.post("/api/login", payload); 
+
+    if (data.access_token) {
+      const userData = {
+        id: data.userId,
+        username: data.userName,
+        name: `${data.firstName} ${data.lastName}`,
+        role: data.loginType,
+        school: data.schoolName,
+        image: data.loginImage
       };
 
-await axios.post("/api/login", payload);
+      setAuthState({
+        user: userData,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      });
 
-      if (data.access_token) {
-        const userData = {
-          id: data.userId,
-          username: data.userName,
-          name: `${data.firstName} ${data.lastName}`,
-          role: data.loginType,
-          school: data.schoolName,
-          image: data.loginImage
-        };
-
-        setAuthState({
-          user: userData,
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
-        });
-        navigate('/select-test');
-        setIsLoggedIn(true);
-        setLoginOpen(false);
-        setLoginData({ username: "", password: "" });
-        setLoginError("");
-      } else {
-        setLoginError("Invalid credentials or missing token");
-      }
-
-    } catch (err) {
-      
-    } finally {
-      setLoading(false);
+      navigate('/select-test');
+      setIsLoggedIn(true);
+      setLoginOpen(false);
+      setLoginData({ username: "", password: "" });
+      setLoginError("");
+    } else {
+      setLoginError("Invalid credentials or missing token");
     }
-  };
+  } catch (err) {
+    setLoginError("Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ThemeProvider theme={theme}>

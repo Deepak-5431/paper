@@ -1,7 +1,7 @@
 import axios from "axios";
 
 
-const API_BASE2_URL = process.env.API_BASE2_URL;
+const API_BASE_URL = process.env.IBLIB_BASE_URL;
 
 const DEFAULT_HEADERS = (req) => ({
   'Authorization': req.headers.authorization || '',
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     const { data } = await axios.post(
-      `${API_BASE2_URL}/study/testpaper/questions/${paperId}`,
+      `${API_BASE_URL}/study/testpaper/questions/${paperId}`,
       req.body,
       { headers: DEFAULT_HEADERS(req) }
     );

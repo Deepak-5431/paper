@@ -1,10 +1,10 @@
 import axios from "axios";
-const API_BASE2_URL = process.env.API_BASE2_URL;
+const API_BASE_URL = process.env.IBLIB_BASE_URL;
 
 const DEFAULT_HEADERS = (req) => ({
   'Authorization': req.headers.authorization || '',
   'Accept': 'application/json',
-  'User-Agent': req.headers['user-agent'] || 'Vite-Proxy-Client',
+  'User-Agent': req.headers['user-agent'] || 'Vercel-Proxy-Client',
   'Content-Type': 'application/json',
 });
 
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     // Fetch all test papers
-    const allPapersResponse = await axios.get(`${API_BASE2_URL}/study/testpapers/`, {
+    const allPapersResponse = await axios.get(`${API_BASE_URL}/study/testpapers/`, {
       headers: DEFAULT_HEADERS(req),
     });
     const allPapers = allPapersResponse.data;
