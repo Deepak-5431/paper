@@ -76,7 +76,7 @@ const Page1 = () => {
         appVersionCode: "1"
       };
 
-      const { data } = await axios.post("http://localhost:5000/api/login", payload);
+await axios.post("/api/login", payload);
 
       if (data.access_token) {
         const userData = {
