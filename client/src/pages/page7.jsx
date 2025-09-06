@@ -1,35 +1,23 @@
-  import { useState, useEffect } from 'react';
-  import { useNavigate } from 'react-router-dom';
-  import {
-    Box,
-    Typography,
-    Card,
-    CardContent,
-    Button,
-    CircularProgress,
-    Alert,
-    TextField,
-    CardMedia,
-    Fade,
-  } from '@mui/material';
-  import { useUser } from '../context/UserContext';
-  import axios from 'axios';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Box, Typography, Card, CardContent, Button, CircularProgress, Alert, TextField, CardMedia, Fade,
+} from '@mui/material';
+import { useUser } from '../context/UserContext';
+import axios from 'axios';
+import SchoolIcon from '@mui/icons-material/School';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
+const Page7 = () => {
+  const [testPapers, setTestPapers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCheckingStatus, setIsCheckingStatus] = useState(null); 
+  const navigate = useNavigate();
+  const { authState } = useUser();
 
-  import SchoolIcon from '@mui/icons-material/School';
-  import AccessTimeIcon from '@mui/icons-material/AccessTime';
-  import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-
-  const Page7 = () => {
-  
-    const [testPapers, setTestPapers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const navigate = useNavigate();
-    const { authState } = useUser();
-
-  
   useEffect(() => {
     const fetchTestPapers = async () => {
       setLoading(true);
@@ -37,120 +25,130 @@
 
       try {
         const token = authState.accessToken;
+        
         const response = await axios.get('/api/testpapers', {
           headers: { 'Authorization': token }
         });
+        
+       
         setTestPapers(response.data);
+
       } catch (e) {
-        setError(e.response?.data?.message || "Failed to fetch test papers.");
+        
       } finally {
         setLoading(false);
       }
     };
 
-    
     if (authState && authState.accessToken) {
-      
       fetchTestPapers();
     } else if (authState === null) {
-      
       setError("You must be logged in to view test papers.");
       setLoading(false);
     }
-    
-
   }, [authState]);
-    
+
   
-    const handleTestSelect = (paperId) => {
-    navigate(`/page2/${paperId}`);
-    };
+  const handleStartTest = async (paperId) => {
+    setIsCheckingStatus(paperId); 
+    try {
+      const token = authState.accessToken;
+      const response = await axios.get(`/api/testpaper/${paperId}`, {
+         headers: { 'Authorization': token }
+      });
 
-    
-    const filteredPapers = testPapers.filter(paper =>
-      paper.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      const isCompleted = response.data?.isCompleted == "1";
 
-    
-    if (loading) {
-      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <CircularProgress />
-        </Box>
-      );
+      if (isCompleted) {
+        
+        navigate(`/page6/${paperId}`);
+      } else {
+       
+        localStorage.setItem("qp_code", paperId);
+        navigate(`/page2/${paperId}`);
+      }
+    } catch (err) {
+      
+    } finally {
+      setIsCheckingStatus(null); 
     }
+  };
+  
+  const filteredPapers = testPapers.filter(paper =>
+    paper.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    if (error) {
-      return (
-        <Box sx={{ py: 4, px: 2 }}>
-          <Alert severity="error">{error}</Alert>
-        </Box>
-      );
-    }
-
+  if (loading) {
     return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ py: 4, px: 2 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ 
+      bgcolor: 'grey.100', 
+      minHeight: '100vh', 
+      width: '98vw',
+      overflowX: 'hidden'
+    }}>
       <Box sx={{ 
-        bgcolor: 'grey.100', 
-        minHeight: '100vh', 
-        width: '99vw',
-        overflowX: 'hidden'
+        py: { xs: 3, md: 5 },
+        px: { xs: 2, sm: 3, md: 4, lg: 6 } 
       }}>
-        
         <Box sx={{ 
-          py: { xs: 3, md: 5 },
-          px: { xs: 2, sm: 3, md: 4, lg: 6 } 
+          textAlign: 'center', 
+          mb: 5,
+          width: '100%'
         }}>
-        
-          <Box sx={{ 
-            textAlign: 'center', 
-            mb: 5,
-            width: '100%'
-          }}>
-            <Typography variant="h3" component="h1" fontWeight="700" gutterBottom>
-            
-              Brought to you by GradePlus
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              
-              Available Tests
-              
-            </Typography>
-            <Typography variant="h7" color="text.secondary">
-              Choose a test to begin and challenge your knowledge
-              
-            </Typography>
-          </Box>
+          <Typography variant="h3" component="h1" fontWeight="700" gutterBottom>
+            Brought to you by GradePlus
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            Available Tests
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Choose a test to begin and challenge your knowledge
+          </Typography>
+        </Box>
 
-        
-          <Box sx={{ 
-            mb: 5,
-            width: '100%'
-          }}>
-            <TextField
-              fullWidth
-              label="Search for a test..."
-              variant="outlined"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ 
-                bgcolor: 'white',
-                maxWidth: '100%' 
-              }}
-            />
-          </Box>
+        <Box sx={{ 
+          mb: 5,
+          width: '100%'
+        }}>
+          <TextField
+            fullWidth
+            label="Search for a test..."
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ 
+              bgcolor: 'white',
+              maxWidth: '100%' 
+            }}
+          />
+        </Box>
 
-          
-          <Box sx={{ 
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3
-          }}>
-            {filteredPapers.length > 0 ? (
-              filteredPapers.map((paper, index) => (
+        <Box sx={{ 
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
+        }}>
+          {filteredPapers.length > 0 ? (
+            filteredPapers.map((paper, index) => {
+              return (
                 <Fade in={true} timeout={300 + index * 100} key={paper.id}>
                   <Card
-                    onClick={() => handleTestSelect(paper.id)}
                     sx={{
                       width: '100%',
                       display: 'flex',
@@ -158,7 +156,7 @@
                       borderRadius: 3,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                      cursor: 'pointer',
+                    
                       '&:hover': {
                         transform: 'translateY(-5px)',
                         boxShadow: '0 10px 20px rgba(0,0,0,0.1)',
@@ -210,29 +208,33 @@
                         mt: 'auto', 
                         alignSelf: { xs: 'stretch', md: 'flex-end' }
                       }}>
-                        <Button variant="contained" color="primary" size="large">
-                          Start Test
+                        
+                        <Button 
+                          variant="contained" 
+                          color="primary" 
+                          size="large"
+                          disabled={isCheckingStatus === paper.id} 
+                          onClick={() => handleStartTest(paper.id)}
+                        >
+                          {isCheckingStatus === paper.id ? <CircularProgress size={24} color="inherit" /> : 'View Test'}
                         </Button>
                       </Box>
                     </Box>
                   </Card>
                 </Fade>
-              ))
-            ) : (
-              <Box sx={{ 
-                textAlign: 'center', 
-                py: 8,
-                width: '100%'
-              }}>
-                <Typography variant="h6" color="text.secondary">
-                  No tests found matching your search.
-                </Typography>
-              </Box>
-            )}
-          </Box>
+              );
+            })
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 8, width: '100%' }}>
+              <Typography variant="h6" color="text.secondary">
+                No tests found matching your search.
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Box>
-    );
-  };
+    </Box>
+  );
+};
 
-  export default Page7;
+export default Page7;

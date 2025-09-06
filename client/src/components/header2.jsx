@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import  { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Toolbar, Typography, Button, Box, ThemeProvider,
   createTheme, AppBar, useMediaQuery, IconButton,
@@ -118,6 +119,7 @@ const QuestionNumBox = styled(Box, {
 }));
 
 const Header2 = ({
+    
 
   sections = [],
   currentQuestionNumber,
@@ -128,6 +130,7 @@ const Header2 = ({
   timerColor,
   questions = [],
   questionStatus = {},
+   paperId,
   authState,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -136,7 +139,7 @@ const Header2 = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
-
+  const navigate = useNavigate();
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
@@ -272,6 +275,7 @@ const Header2 = ({
       
       <Button
         variant="contained"
+        onClick={() => navigate(`/page2/${paperId}`)}
         sx={{
           backgroundColor: 'grey.300',
           color: 'text.primary',

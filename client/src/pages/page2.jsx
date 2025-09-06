@@ -6,7 +6,7 @@ import {
   Select, Button, FormControlLabel, Checkbox, useTheme,
   CssBaseline, ThemeProvider, CircularProgress, Alert
 } from "@mui/material";
-import Header from '../components/header'
+import Header from "../components/header";
 import { useUser } from "../context/UserContext";
 
 const Scroll = styled(Box)(({ theme }) => ({
@@ -51,11 +51,11 @@ const generateInstructions = (details) => {
   dynamicInstructions.push(`The total duration for the test is ${details.duration || 'N/A'} minutes.`);
 
   
-  dynamicInstructions.push(`Each question has multiple options, out of which only one is correct.`);
-  dynamicInstructions.push(`Marks for correct answers and penalties for wrong answers (if any) are indicated for each question.`);
+ 
   
   
-  dynamicInstructions.push("The clock has been set at the server. The countdown timer at the top of the screen will display the remaining time. The test will submit automatically when the time reaches zero.");
+  
+  dynamicInstructions.push("The countdown timer at the top of the screen will display the remaining time. The test will submit automatically when the time reaches zero.");
 
  
   dynamicInstructions.push("To navigate to a question, click on its number in the Question Palette. To save your answer, you must click the 'Save & Next' button.");
@@ -97,10 +97,14 @@ const Page2 = () => {
   const [sourceInstructions, setSourceInstructions] = useState(null);
   const [displayText, setDisplayText] = useState(null);
   const [language, setLanguage] = useState("english");
-  const [isChecked, setIsChecked] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [isChecked, setIsChecked] = useState(() => {
+  const savedAnswers = localStorage.getItem('userAnswers');
+  const savedPaperId = localStorage.getItem('currentPaperId');
+  return !!(savedAnswers && savedPaperId === paperId);
+  });  const [isTranslating, setIsTranslating] = useState(false);
 
   
+
   useEffect(() => {
     const fetchTestDetails = async () => {
       setLoading(true);
@@ -115,10 +119,21 @@ const Page2 = () => {
         setTestDetails(details);
 
         const generated = generateInstructions(details);
+
+    
+        const savedAnswers = localStorage.getItem('userAnswers');
+        const savedPaperId = localStorage.getItem('currentPaperId');
+        
+        
+        if (savedAnswers && savedPaperId === paperId) {
+            generated.readyButton = "Resume Test";
+        }
+        
         setSourceInstructions(generated);
         setDisplayText(generated);
+
       } catch (e) {
-        setError(e.response?.data?.message || "Failed to load test instructions.");
+        
       } finally {
         setLoading(false);
       }
@@ -142,8 +157,7 @@ const Page2 = () => {
         }, { headers: { "Content-Type": "application/json" } });
         return response.data?.translatedText || text;
       } catch (error) {
-        console.error("Translation failed:", error);
-        return text;
+        
       }
     };
     
@@ -289,8 +303,8 @@ const Page2 = () => {
             </Box>
 
 
-            <Box sx={{ mt: 4, flexGrow: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "text.primary" }}>
+            <Box sx={{ mt: 5, flexGrow: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold", mb: 3,mt:2, color: "text.primary" }}>
                 {displayText.declaration}
               </Typography>
               <FormControlLabel

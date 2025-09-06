@@ -1,22 +1,16 @@
-import React from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import { useUser } from "../context/UserContext";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Radio,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  IconButton,
-  Grid,
-  Paper,
-  Modal,
-  Avatar,
-  Tooltip,
-  CircularProgress,
-  Alert,
+import Header2 from "../components/header2";
+import { Box,  Typography,  Button,  Radio,  RadioGroup,  Checkbox,  FormControlLabel,  Select,  MenuItem,  IconButton,  Grid,  Paper,  Modal,  Avatar,  Tooltip, CircularProgress,
+  Alert, TextField,
 } from "@mui/material";
 import {
   Language,
@@ -29,21 +23,39 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import Header2 from "../components/header2"
-import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom";
+import { MathJaxContext, MathJax } from "better-react-mathjax";
+
+const API_BASE_URL = "https://test.iblib.com";
+
+const mathJaxConfig = {
+  loader: { 
+    load: ['[tex]/html', '[tex]/ams'] 
+  },
+  tex: {
+    packages: { '[+]': ['html', 'ams'] },
+    inlineMath: [
+      ['$', '$'],
+      ['\\(', '\\)']
+    ],
+    displayMath: [
+      ['$$', '$$'],
+      ['\\[', '\\]']
+    ],
+    processEscapes: true
+  },
+  startup: {
+    typeset: false
+  }
+};
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
-
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
-
   componentDidCatch(error, errorInfo) {
     console.error("Error caught by boundary:", error, errorInfo);
   }
-
   render() {
     if (this.state.hasError) {
       return (
@@ -51,13 +63,16 @@ class ErrorBoundary extends React.Component {
           <Alert severity="error" sx={{ mb: 2 }}>
             Something went wrong. Please refresh the page.
           </Alert>
-          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
         </Box>
       );
     }
     return this.props.children;
   }
 }
+
 const theme = createTheme({
   palette: {
     primary: { main: "#2196F3" },
@@ -72,6 +87,7 @@ const theme = createTheme({
   },
 });
 
+
 const StyledContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -83,24 +99,24 @@ const StyledContainer = styled(Box)(({ theme }) => ({
 const MainContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexGrow: 1,
-  height: "auto", // Changed from 'calc(100vh - 70px)'
+  height: "auto",
   marginBottom: "70px",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
-    height: "auto", // Changed from '100vh'
+    height: "auto",
     marginBottom: 0,
   },
 }));
 
 const LeftPanel = styled(Box)(({ theme }) => ({
-  width: "1200px", // Keep your reduced width
+  width: "1198px",
   flexShrink: 0,
   backgroundColor: theme.palette.background.paper,
   borderRight: `1px solid ${theme.palette.divider}`,
   display: "flex",
   flexDirection: "column",
-  height: "auto", // Changed from '100%' to 'auto'
-  minHeight: "fit-content", // Added to fit its content
+  height: "auto",
+  minHeight: "fit-content",
   overflow: "hidden",
   position: "relative",
   zIndex: 1,
@@ -108,9 +124,10 @@ const LeftPanel = styled(Box)(({ theme }) => ({
     flex: 1,
     width: "100%",
     borderRight: "none",
-    height: "auto", // Also adjust for mobile
+    height: "auto",
   },
 }));
+
 const ScrollableContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   overflowY: "auto",
@@ -144,7 +161,7 @@ const RightSidebar = styled(Box)(({ theme, open }) => ({
   },
 }));
 
-const SidebarOverlay = styled(Box)(({ theme, open }) => ({
+const SidebarOverlay = styled(Box)(({ open }) => ({
   display: open ? "flex" : "none",
   position: "fixed",
   top: 0,
@@ -228,6 +245,150 @@ const QuestionNumBox = styled(Box, {
   }),
 }));
 
+const num = (v, d = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+};
+
+const processHTMLContent = (html) => {
+  if (!html) return { text: "", image: null, htmlContent: "" };
+  
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  const firstImage = doc.querySelector("img");
+  const imageSrc = firstImage ? firstImage.getAttribute("src") : null;
+  const text = doc.body.textContent?.trim() || "";
+
+  return {
+    text,
+    image: imageSrc,
+    htmlContent: html, 
+  };
+};
+
+const normalizeQuestion = (raw, idx, sections) => {
+  const id =
+    raw.id ?? raw.qid ?? raw._id ?? raw.questionId ?? raw.uuid ?? String(idx);
+
+  const {
+    text: questionText,
+    image: questionImage,
+    htmlContent: questionHtml,
+  } = processHTMLContent(raw.question ?? raw.q ?? raw.text ?? "");
+
+  const processedOptions = (raw.options ?? raw.choices ?? raw.opts ?? []).map(
+    (optionHtml, index) => {
+      const {
+        text: optionText,
+        image: optionImage,
+        htmlContent: optionFullHtml,
+      } = processHTMLContent(optionHtml);
+      return {
+        text: optionText,
+        image: optionImage,
+        html: optionFullHtml, 
+        originalIndex: index,
+        isEmpty: !optionText && !optionImage,
+      };
+    }
+  );
+
+  const m = raw.marks ?? {};
+  const marks = {
+    positive: num(
+      m.positive ?? m.pos ?? raw.positiveMarks ?? raw.mark ?? raw.marksPositive,
+      1
+    ),
+    negative: num(
+      m.negative ??
+        m.neg ??
+        raw.negativeMarks ??
+        raw.negMark ??
+        raw.marksNegative,
+      0.25
+    ),
+  };
+
+  const t = String(
+    raw.type ?? raw.questionType ?? raw.answerType ?? ""
+  ).toLowerCase();
+
+  const allowMultiple =
+    raw.allowMultiple === true ||
+    /multiple|multi|checkbox/.test(t) ||
+    (Array.isArray(raw.correctAnswer) && raw.correctAnswer.length > 1);
+
+  const isText =
+    /fitb|fib|fill|blank|text|input|typing/.test(t) ||
+    processedOptions.every((opt) => opt.isEmpty);
+
+  let kind = "single";
+  if (isText) kind = "text";
+  else if (allowMultiple) kind = "multiple";
+
+  const questionNumber = idx + 1;
+  const sec =
+    sections?.find((s) => questionNumber >= s.start && questionNumber <= s.end)
+      ?.name ?? "General";
+
+  return {
+    ...raw,
+    id,
+    qid: raw.qid ?? id,
+    questionText,
+    questionImage,
+    questionHtml,
+    processedOptions,
+    marks,
+    kind,
+    section: sec,
+    __idx: idx,
+  };
+};
+
+const parseSections = (sectionsString, totalQuestions = 0) => {
+  if (!sectionsString)
+    return [{ name: "All Questions", start: 1, end: totalQuestions || 0 }];
+  try {
+    return sectionsString.split("@@@").map((sectionStr) => {
+      const [name, s, e] = sectionStr.split("#@#");
+      return {
+        name: name || "Section",
+        start: parseInt(s, 10) || 1,
+        end: parseInt(e, 10) || totalQuestions || 0,
+      };
+    });
+  } catch (error){
+    console.error("Failed to parse sections:", error)
+  }
+};
+
+const buildResponsePayload = (q, answerValue) => {
+  let response = "";
+  if (q.kind === "single") {
+    if (
+      answerValue !== undefined &&
+      answerValue !== null &&
+      String(answerValue) !== ""
+    ) {
+      response = String(answerValue);
+    }
+  } else if (q.kind === "multiple") {
+    if (Array.isArray(answerValue) && answerValue.length > 0) {
+      response = [
+        ...new Set(answerValue.map((i) => Number(i)).filter(Number.isInteger)),
+      ]
+        .sort((a, b) => a - b)
+        .join(",");
+    }
+  } else if (q.kind === "text") {
+    response = (answerValue ?? "").toString().trim();
+  }
+  return { data: q.qid, response };
+};
+
 const MemoizedQuestionNumBox = React.memo(
   ({ current, status, onClick, children }) => (
     <QuestionNumBox $current={current} status={status} onClick={onClick}>
@@ -237,28 +398,26 @@ const MemoizedQuestionNumBox = React.memo(
 );
 
 const QuestionPalette = React.memo(
-  ({ questions, currentQuestionIndex, questionStatus, navigateToQuestion }) => {
-    return (
-      <Box sx={{ overflow: "visible" }}>
-        <Typography variant="subtitle2" fontWeight={800} gutterBottom>
-          Question Palette
-        </Typography>
-        <Grid container spacing={2}>
-          {questions.map((q, index) => (
-            <Grid item xs={2} key={q.id || index}>
-              <MemoizedQuestionNumBox
-                current={currentQuestionIndex === index}
-                status={questionStatus[q.id] || "not-visited"}
-                onClick={() => navigateToQuestion(index)}
-              >
-                {index + 1}
-              </MemoizedQuestionNumBox>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    );
-  }
+  ({ questions, currentQuestionIndex, questionStatus, navigateToQuestion }) => (
+    <Box sx={{ overflow: "visible" }}>
+      <Typography variant="subtitle2" fontWeight={800} gutterBottom>
+        Question Palette
+      </Typography>
+      <Grid container spacing={2}>
+        {questions.map((q, index) => (
+          <Grid item xs={2} key={q.id || index}>
+            <MemoizedQuestionNumBox
+              current={currentQuestionIndex === index}
+              status={questionStatus[q.id] || "not-visited"}
+              onClick={() => navigateToQuestion(index)}
+            >
+              {index + 1}
+            </MemoizedQuestionNumBox>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  )
 );
 
 const UserProfile = React.memo(({ authState }) => (
@@ -275,13 +434,7 @@ const UserProfile = React.memo(({ authState }) => (
     <Avatar
       src={authState?.user?.image}
       alt={authState?.user?.name}
-      sx={{
-        width: 60,
-        height: 60,
-        bgcolor: "primary.main",
-        fontSize: "24px",
-        fontWeight: "bold",
-      }}
+      sx={{ width: 60, height: 60, bgcolor: "primary.main" }}
     >
       {!authState?.user?.image && authState?.user?.name?.[0]}
     </Avatar>
@@ -339,7 +492,8 @@ const QuestionStatusLegend = React.memo(() => (
     ))}
   </Box>
 ));
-const SidebarButtons = React.memo(() => (
+
+const SidebarButtons = React.memo(({ navigate, paperId }) => (
   <Box
     sx={{
       mt: "auto",
@@ -353,6 +507,7 @@ const SidebarButtons = React.memo(() => (
   >
     <Button
       variant="contained"
+      onClick={() => navigate(`/page2/${paperId}`)}
       sx={{
         backgroundColor: "grey.300",
         color: "text.primary",
@@ -402,9 +557,88 @@ const CompletionScreen = React.memo(({ navigate }) => (
   </Box>
 ));
 
+
+const MathContent = React.memo(({ htmlContent }) => {
+  if (!htmlContent) return null;
+
+ 
+  const convertApiMathToLatex = (apiString) => {
+    
+    let cleanStr = apiString.replace(/`/g, "").replace(/<br\s*\/?>/gi, "").trim();
+
+    
+    if (!cleanStr.includes('/') && !cleanStr.includes('sqrt')) {
+        return cleanStr; 
+    }
+    
+
+    let latexStr = cleanStr.replace(/(\d*)sqrt\((\d+)\)/g, (match, coeff, content) => {
+        const coefficient = coeff ? coeff.trim() : '';
+        return `${coefficient}\\sqrt{${content}}`;
+    });
+
+    
+    const parts = latexStr.split('/');
+    if (parts.length === 2) {
+        let numerator = parts[0].trim();
+        let denominator = parts[1].trim();
+
+        
+        if (numerator.startsWith('(') && numerator.endsWith(')')) {
+            numerator = numerator.slice(1, -1);
+        }
+        if (denominator.startsWith('(') && denominator.endsWith(')')) {
+            denominator = denominator.slice(1, -1);
+        }
+
+        latexStr = `\\frac{${numerator}}{${denominator}}`;
+    }
+
+    return latexStr;
+  };
+  
+  const latexString = convertApiMathToLatex(htmlContent);
+
+
+  const finalContent = latexString.includes('\\') ? `$${latexString}$` : latexString;
+  
+  return (
+      <MathJax dynamic>
+          <div
+            style={{ lineHeight: 1.8 }}
+            dangerouslySetInnerHTML={{ __html: finalContent }}
+          />
+      </MathJax>
+  );
+});
+
 const QuestionContent = React.memo(
-  ({ question, index, answers, onAnswerSelect }) => {
+  ({
+    question,
+    index,
+    answers,
+    onSingleSelect,
+    onMultiToggle,
+    onTextChange,
+  }) => {
     if (!question) return null;
+
+    const selectedSingleIndex =
+      answers[question.id] !== undefined ? Number(answers[question.id]) : null;
+
+    const selectedMulti = Array.isArray(answers[question.id])
+      ? answers[question.id]
+      : [];
+    const textValue =
+      typeof answers[question.id] === "string" ? answers[question.id] : "";
+
+    const getImageUrl = (relativePath) => {
+      if (!relativePath) return "";
+      if (relativePath.startsWith("http") || relativePath.startsWith("data:")) {
+        return relativePath;
+      }
+      return new URL(relativePath, API_BASE_URL).href;
+    };
 
     return (
       <Box key={question.id} sx={{ mb: 5 }}>
@@ -422,7 +656,7 @@ const QuestionContent = React.memo(
         >
           <Box sx={{ display: "flex", alignItems: "baseline", gap: 2 }}>
             <Typography variant="h6" fontWeight={600}>
-              Question #{index + 1}
+              Question - {index + 1 } 
             </Typography>
           </Box>
 
@@ -479,38 +713,143 @@ const QuestionContent = React.memo(
         </Box>
 
         <Box>
-          <Typography variant="body1" paragraph sx={{ lineHeight: 1.8 }}>
-            {question.question}
-          </Typography>
-
-          <Box sx={{ mt: 2 }}>
-            {question.options &&
-              question.options.slice(0, 4).map((option, idx) => (
-                <FormControlLabel
-                  key={idx}
-                  control={
-                    <Radio
-                      checked={answers[question.id] === option}
-                      onChange={() => onAnswerSelect(question, idx)}
-                      color="primary"
-                      size="small"
-                    />
-                  }
-                  label={option}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    mb: 1,
-                    "& .MuiTypography-root": { fontSize: "15px" },
+          <Box sx={{ typography: "body1" }}>
+            
+            <MathContent htmlContent={question.questionHtml} />
+            {question.questionImage && (
+              <Box sx={{ my: 2 }}>
+                <img
+                  src={getImageUrl(question.questionImage)}
+                  alt="Question illustration"
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    display: "block",
+                    borderRadius: "4px",
                   }}
                 />
-              ))}
+              </Box>
+            )}
           </Box>
+
+          {question.kind === "single" && (
+            <RadioGroup
+              sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 2 }}
+              value={
+                selectedSingleIndex !== null
+                  ? String(selectedSingleIndex)
+                  : ""
+              }
+              onChange={(e) =>
+                onSingleSelect(question, Number(e.target.value))
+              }
+            >
+              {question.processedOptions.map((opt) =>
+                !opt.isEmpty ? (
+                  <FormControlLabel
+                    key={opt.originalIndex}
+                    value={String(opt.originalIndex)}
+                    control={<Radio />}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
+                        <Typography component="span" fontWeight="bold" sx={{ pt: '2px' }}>
+                          ({String.fromCharCode(65 + opt.originalIndex)})
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
+                         
+                          <MathContent htmlContent={opt.html} />
+                          {opt.image && (
+                            <img
+                              src={getImageUrl(opt.image)}
+                              alt={`Option ${opt.originalIndex + 1}`}
+                              style={{
+                                maxWidth: 200,
+                                maxHeight: 150,
+                                borderRadius: 4,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    }
+                    sx={{
+                      alignItems: "flex-start",
+                      mb: 1,
+                      width: "100%",
+                      "& .MuiFormControlLabel-label": { mt: 0.5 },
+                    }}
+                  />
+                ) : null
+              )}
+            </RadioGroup>
+          )}
+
+          
+          {question.kind === "multiple" && (
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+              {question.processedOptions.map((opt) =>
+                !opt.isEmpty ? (
+                  <FormControlLabel
+                    key={opt.originalIndex}
+                    control={
+                      <Checkbox
+                        checked={selectedMulti.includes(opt.originalIndex)}
+                        onChange={() =>
+                          onMultiToggle(question, opt.originalIndex)
+                        }
+                      />
+                    }
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
+                        <Typography component="span" fontWeight="bold" sx={{ pt: '2px' }}>
+                          ({String.fromCharCode(65 + opt.originalIndex)})
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
+                          <MathContent htmlContent={opt.html} />
+                          {opt.image && (
+                            <img
+                              src={getImageUrl(opt.image)}
+                              alt={`Option ${opt.originalIndex + 1}`}
+                              style={{
+                                maxWidth: 200,
+                                maxHeight: 150,
+                                borderRadius: 4,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    }
+                    sx={{
+                      alignItems: "flex-start",
+                      mb: 1,
+                      width: "100%",
+                      "& .MuiFormControlLabel-label": { mt: 0.5 },
+                    }}
+                  />
+                ) : null
+              )}
+            </Box>
+          )}
+           {question.kind === "text" && (
+            <Box sx={{ mt: 1, maxWidth: 640 }}>
+              <TextField
+                fullWidth
+                multiline
+                minRows={1}
+                maxRows={6}
+                placeholder="Type your answer here…"
+                value={textValue}
+                onChange={(e) => onTextChange(question, e.target.value)}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
     );
   }
 );
+
 
 const Page3 = () => {
   const { paperId } = useParams();
@@ -520,28 +859,28 @@ const Page3 = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
   const [sections, setSections] = useState([]);
   const [currentSectionName, setCurrentSectionName] = useState("");
+
+  const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [isTestCompleted, setIsTestCompleted] = useState(false);
   const [timerColor, setTimerColor] = useState("inherit");
+  const [error, setError] = useState(null);
+
   const currentQuestion = useMemo(
     () => questions[currentQuestionIndex] || null,
     [questions, currentQuestionIndex]
   );
 
   const api = useMemo(() => {
-    const instance = axios.create({
-      baseURL: "/api",
-    });
-
+    const instance = axios.create({ baseURL: "/api", timeout: 15000 });
     instance.interceptors.request.use(
       (config) => {
         if (authState?.accessToken) {
@@ -551,7 +890,6 @@ const Page3 = () => {
       },
       (error) => Promise.reject(error)
     );
-
     instance.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -562,69 +900,122 @@ const Page3 = () => {
         return Promise.reject(error);
       }
     );
-
     return instance;
   }, [authState?.accessToken, setAuthState]);
 
-  const stripHTML = useCallback((html) => {
-    if (!html) return "";
-    return html
-      .replace(/<img[^>]*>/gi, "")
-      .replace(/<\/?([^>]+)>/g, "")
-      .trim();
-  }, []);
-
-  const parseSections = useCallback((sectionsString) => {
-    if (!sectionsString) return [];
+  
+  const saveLocal = useCallback((key, data) => {
     try {
-      return sectionsString.split("@@@").map((sectionStr) => {
-        const parts = sectionStr.split("#@#");
-        return {
-          name: parts[0],
-          start: parseInt(parts[1], 10),
-          end: parseInt(parts[2], 10),
-        };
-      });
+      localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error("Failed to parse sections string:", e);
-      return [];
+      console.error("Failed to save to localStorage:", e);
     }
   }, []);
 
-  const formatTime = useCallback((seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-      2,
-      "0"
-    )}:${String(secs).padStart(2, "0")}`;
-  }, []);
+  const saveAnswersLocally = useCallback(() => {
+    const enhancedAnswers = { ...answers };
+    questions.forEach((question) => {
+      const answerId = question.id;
+      const answerQid = question.qid;
+      const userAnswer = answers[answerId];
 
-  const timerValue = useMemo(
-    () => formatTime(timeLeft),
-    [timeLeft, formatTime]
-  );
+      if (userAnswer !== undefined) {
+        enhancedAnswers[answerId] = userAnswer;
+        if (answerQid && answerQid !== answerId) {
+          enhancedAnswers[answerQid] = userAnswer;
+        }
+      }
+    });
 
+    saveLocal("userAnswers", enhancedAnswers);
+    saveLocal("questionStatus", questionStatus);
+    saveLocal("questions", questions);
+    if (paperId) localStorage.setItem("currentPaperId", String(paperId));
+  }, [answers, questionStatus, questions, paperId, saveLocal]);
+
+  useEffect(() => {
+    const t = setTimeout(saveAnswersLocally, 250);
+    return () => clearTimeout(t);
+  }, [answers, questionStatus, questions, saveAnswersLocally]);
+
+  const fetchAllData = useCallback(async () => {
+    if (!authState?.accessToken) {
+      setError("Authentication required. Please log in to take the test.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const questionsRes = await axios.get(`/api/questions/${paperId}`, {
+        headers: { Authorization: authState.accessToken },
+      });
+      const testPaperRes = await axios.get(`/api/testpaper/${paperId}`, {
+        headers: { Authorization: authState.accessToken },
+      });
+
+      const fetchedQuestionsData = Array.isArray(questionsRes.data)
+        ? questionsRes.data
+        : [];
+      const testPaperData = testPaperRes.data || {};
+
+      const parsedSections = parseSections(
+        testPaperData.sections,
+        fetchedQuestionsData.length
+      );
+      const normalized = fetchedQuestionsData.map((q, idx) =>
+        normalizeQuestion(q, idx, parsedSections)
+      );
+
+      setSections(parsedSections);
+      if (testPaperData.duration) {
+        setTimeLeft(num(testPaperData.duration, 0) * 60);
+      }
+      
+      setQuestions(normalized);
+
+      const cachedPaperId = localStorage.getItem("currentPaperId");
+      if (String(cachedPaperId) === String(paperId)) {
+        console.log(
+          "Resuming same paper. Attempting to load state from localStorage."
+        );
+        const cachedAns = localStorage.getItem("userAnswers");
+        const cachedStatus = localStorage.getItem("questionStatus");
+
+        if (cachedAns && cachedStatus) {
+          setAnswers(JSON.parse(cachedAns));
+          setQuestionStatus(JSON.parse(cachedStatus));
+          return;
+        }
+      }
+
+      console.log("Starting a new test session.");
+      const initialStatus = {};
+      normalized.forEach((q) => {
+        initialStatus[q.id] = "not-visited";
+      });
+      if (normalized.length > 0) {
+        initialStatus[normalized[0].id] = "not-answered";
+      }
+      setAnswers({});
+      setQuestionStatus(initialStatus);
+    } catch (e) {
+      console.error("Failed to fetch test data:", e);
+      setError("Could not load the test. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [paperId, authState]);
+  
   const saveCurrentAnswer = useCallback(async () => {
-    if (!currentQuestion) return;
-
-    const response =
-      answers[currentQuestion.id] !== undefined
-        ? String(currentQuestion.options.indexOf(answers[currentQuestion.id]))
-        : "";
-
-    const payload = {
-      data: currentQuestion.qid,
-      response: response,
-    };
-
-    console.log("[Save Answer] Saving to backend:", payload);
+    const q = currentQuestion;
+    if (!q) return;
+    const payload = buildResponsePayload(q, answers[q.id]);
     try {
       await api.post(`/testpaper/questions/${paperId}`, payload);
     } catch (err) {
-      setError("Failed to save your progress. Please check your connection.");
-      throw err;
+      console.error("Failed to save current answer:", err);
     }
   }, [api, paperId, currentQuestion, answers]);
 
@@ -642,13 +1033,22 @@ const Page3 = () => {
 
         setQuestionStatus((prev) => {
           const newStatus = { ...prev };
-          const currentStatus = prev[currentQuestion.id];
-          if (
-            currentStatus !== "marked" &&
-            currentStatus !== "answered-marked"
-          ) {
-            newStatus[currentQuestion.id] = answers[currentQuestion.id]
-              ? "answered"
+          const curId = currentQuestion?.id;
+          if (curId) {
+            const hasAns =
+              answers[curId] !== undefined &&
+              answers[curId] !== null &&
+              String(answers[curId]) !== "";
+            const isMulti =
+              Array.isArray(answers[curId]) && answers[curId].length > 0;
+            const answered = isMulti || hasAns;
+            const wasMarked =
+              prev[curId] === "marked" || prev[curId] === "answered-marked";
+
+            newStatus[curId] = answered
+              ? wasMarked
+                ? "answered-marked"
+                : "answered"
               : "not-answered";
           }
           return newStatus;
@@ -657,24 +1057,24 @@ const Page3 = () => {
         setCurrentQuestionIndex(index);
 
         setQuestionStatus((prev) => {
-          const newQuestionId = questions[index]?.id;
-          if (newQuestionId && prev[newQuestionId] === "not-visited") {
-            const newStatus = { ...prev };
-            newStatus[newQuestionId] = "not-answered";
-            return newStatus;
+          const nextId = questions[index]?.id;
+          if (nextId && prev[nextId] === "not-visited") {
+            const copy = { ...prev };
+            copy[nextId] = "not-answered";
+            return copy;
           }
           return prev;
         });
-      } catch (error) {
-        console.error("Navigation was stopped because save failed:", error);
+      } catch (e) {
+        console.error("Error navigating to question:", e);
       }
     },
     [
-      saveCurrentAnswer,
+      answers,
       currentQuestion,
       currentQuestionIndex,
       questions,
-      answers,
+      saveCurrentAnswer,
     ]
   );
 
@@ -686,19 +1086,27 @@ const Page3 = () => {
         await saveCurrentAnswer();
         setQuestionStatus((prev) => {
           const newStatus = { ...prev };
-          const currentStatus = prev[currentQuestion.id];
-          if (
-            currentStatus !== "marked" &&
-            currentStatus !== "answered-marked"
-          ) {
-            newStatus[currentQuestion.id] = answers[currentQuestion.id]
-              ? "answered"
-              : "not-answered";
+          const curId = currentQuestion?.id;
+          if (curId) {
+            const hasAns =
+              answers[curId] !== undefined &&
+              answers[curId] !== null &&
+              String(answers[curId]) !== "";
+            const isMulti =
+              Array.isArray(answers[curId]) && answers[curId].length > 0;
+            const wasMarked =
+              prev[curId] === "marked" || prev[curId] === "answered-marked";
+            newStatus[curId] =
+              isMulti || hasAns
+                ? wasMarked
+                  ? "answered-marked"
+                  : "answered"
+                : "not-answered";
           }
           return newStatus;
         });
-      } catch (error) {
-        console.error("Failed to save the last question:", error);
+      } catch (e) {
+        console.error("Error on final save:", e);
       }
     }
   }, [
@@ -710,11 +1118,8 @@ const Page3 = () => {
     answers,
   ]);
 
-  const handleAnswerSelect = useCallback((question, optionIndex) => {
-    if (!question) return;
-    const selectedOptionText = question.options[optionIndex];
-
-    setAnswers((prev) => ({ ...prev, [question.id]: selectedOptionText }));
+  const onSingleSelect = useCallback((question, optionIndex) => {
+    setAnswers((prev) => ({ ...prev, [question.id]: Number(optionIndex) }));
     setQuestionStatus((prev) => ({
       ...prev,
       [question.id]:
@@ -725,61 +1130,93 @@ const Page3 = () => {
     }));
   }, []);
 
-  const clearResponse = useCallback(async () => {
-    if (!currentQuestion) return;
+  const onMultiToggle = useCallback(
+    (question, optionIndex) => {
+      const currentSelection = Array.isArray(answers[question.id])
+        ? [...answers[question.id]]
+        : [];
+      const optionIdx = currentSelection.indexOf(optionIndex);
+      if (optionIdx > -1) {
+        currentSelection.splice(optionIdx, 1);
+      } else {
+        currentSelection.push(optionIndex);
+      }
+      const nextSelection = currentSelection;
 
-    const payload = {
-      data: currentQuestion.qid,
-      response: "",
-    };
+      const currentStatus = questionStatus[question.id];
+      const isMarked =
+        currentStatus === "marked" || currentStatus === "answered-marked";
+
+      let nextStatus;
+      if (nextSelection.length > 0) {
+        nextStatus = isMarked ? "answered-marked" : "answered";
+      } else {
+        nextStatus = isMarked ? "marked" : "not-answered";
+      }
+
+      setAnswers((prev) => ({ ...prev, [question.id]: nextSelection }));
+      setQuestionStatus((prev) => ({ ...prev, [question.id]: nextStatus }));
+    },
+    [answers, questionStatus]
+  );
+
+  const onTextChange = useCallback(
+    (question, value) => {
+      const hasValue = value && value.trim() !== "";
+      const currentStatus = questionStatus[question.id];
+      const isMarked =
+        currentStatus === "marked" || currentStatus === "answered-marked";
+
+      let nextStatus;
+      if (hasValue) {
+        nextStatus = isMarked ? "answered-marked" : "answered";
+      } else {
+        nextStatus = isMarked ? "marked" : "not-answered";
+      }
+
+      setAnswers((prev) => ({ ...prev, [question.id]: value }));
+      setQuestionStatus((prev) => ({ ...prev, [question.id]: nextStatus }));
+    },
+    [questionStatus]
+  );
+
+  const clearResponse = useCallback(async () => {
+    const q = currentQuestion;
+    if (!q) return;
 
     setAnswers((prev) => {
-      const newAnswers = { ...prev };
-      delete newAnswers[currentQuestion.id];
-      return newAnswers;
+      const clone = { ...prev };
+      delete clone[q.id];
+      return clone;
     });
     setQuestionStatus((prev) => ({
       ...prev,
-      [currentQuestion.id]:
-        prev[currentQuestion.id] === "answered-marked"
-          ? "marked"
-          : "not-answered",
+      [q.id]: prev[q.id] === "answered-marked" ? "marked" : "not-answered",
     }));
 
     try {
-      console.log(`[Clear Response] Clearing in backend:`, payload);
+      const payload = buildResponsePayload(q, "");
       await api.post(`/testpaper/questions/${paperId}`, payload);
     } catch (err) {
-      setError("Failed to clear response. Please try again.");
+      console.error("Failed to clear response on server:", err);
     }
-  }, [currentQuestion, api, paperId]);
+  }, [api, paperId, currentQuestion]);
 
   const markForReview = useCallback(() => {
-    if (!currentQuestion) return;
-    const questionId = currentQuestion.id;
-
-    const response =
-      answers[questionId] !== undefined
-        ? String(currentQuestion.options.indexOf(answers[questionId]))
-        : "";
-    const payload = {
-      data: currentQuestion.qid,
-      response: response,
-    };
-    console.log("[Mark For Review] Saving to backend:", payload);
-
+    const q = currentQuestion;
+    if (!q) return;
+    const payload = buildResponsePayload(q, answers[q.id]);
     api.post(`/testpaper/questions/${paperId}`, payload).catch(() => {
       setError("Failed to save answer (mark for review). Please try again.");
     });
-
     setQuestionStatus((prev) => {
-      const newStatus = { ...prev };
-      newStatus[questionId] = answers[questionId]
-        ? "answered-marked"
-        : "marked";
-      return newStatus;
+      const has = answers[q.id];
+      const answered =
+        (Array.isArray(has) && has.length > 0) ||
+        (has !== undefined && has !== null && String(has) !== "");
+      return { ...prev, [q.id]: answered ? "answered-marked" : "marked" };
     });
-  }, [currentQuestion, answers, api, paperId]);
+  }, [api, paperId, currentQuestion, answers]);
 
   const markAndNext = useCallback(() => {
     markForReview();
@@ -787,11 +1224,11 @@ const Page3 = () => {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
       setQuestionStatus((prev) => {
-        const newQuestionId = questions[nextIndex]?.id;
-        if (newQuestionId && prev[newQuestionId] === "not-visited") {
-          const newStatus = { ...prev };
-          newStatus[newQuestionId] = "not-answered";
-          return newStatus;
+        const nextId = questions[nextIndex]?.id;
+        if (nextId && prev[nextId] === "not-visited") {
+          const copy = { ...prev };
+          copy[nextId] = "not-answered";
+          return copy;
         }
         return prev;
       });
@@ -803,161 +1240,62 @@ const Page3 = () => {
   const confirmSubmit = useCallback(async () => {
     setSubmitModalOpen(false);
     setLoading(true);
-    console.log("[Final Submission] Starting the process to submit the test.");
 
     try {
-      const answeredOptionText = answers[currentQuestion.id];
-      const optionIndex =
-        answeredOptionText !== undefined
-          ? currentQuestion.options.indexOf(answeredOptionText)
-          : -1;
+      const lastQuestion = currentQuestion;
+      const lastResponse = answers[lastQuestion.id] || "";
 
-      const payload = {
-        data: currentQuestion.qid,
-        response: optionIndex !== -1 ? String(optionIndex) : "",
-      };
+      await api.post(`/submit/${paperId}`, {
+        data: lastQuestion.qid,
+        response: String(lastResponse),
+      });
 
-      console.log(
-        "[Final Submission] Submitting the last answer and finalizing the test.",
-        payload
-      );
-      const submitEndpoint = `/testpaper/questions/${paperId}?isSubmit=1`;
-      await api.post(submitEndpoint, payload);
-
-      console.log("Final submission successful. Navigating to results page.");
+      const submittedPapersRaw = localStorage.getItem("submittedPapers");
+      const submittedPapers = submittedPapersRaw
+        ? JSON.parse(submittedPapersRaw)
+        : [];
+      if (!submittedPapers.includes(paperId)) {
+        submittedPapers.push(paperId);
+      }
+      localStorage.setItem("submittedPapers", JSON.stringify(submittedPapers));
 
       setIsTestCompleted(true);
-      navigate(`/page4/`);
+      navigate(`/result/${paperId}`, {
+        replace: true,
+        state: { userAnswers: answers },
+      });
     } catch (e) {
-      console.error("Submission failed:", e);
-      setError(
-        `Failed to submit test. Server says: ${
-          e.response?.data?.message || e.message
-        }`
-      );
-    } finally {
+      console.error("Failed to submit test:", e);
+      setError("An error occurred while submitting the test. Please try again.");
       setLoading(false);
     }
-  }, [
-    api,
-    paperId,
-    answers,
-    currentQuestion,
-    navigate,
-    setIsTestCompleted,
-    setError,
-    setLoading,
-  ]);
-
-  const fetchAllData = useCallback(async () => {
-    if (!authState?.accessToken) {
-      setError("Authentication required. Please log in to take the test.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [testPaperRes, questionsRes] = await Promise.all([
-        api.get(`/testpaper/${paperId}`),
-        api.get(`/questions/${paperId}`),
-      ]);
-
-      const testPaperData = testPaperRes.data;
-      const possibleData = questionsRes.data;
-
-      if (testPaperData) {
-        const parsedSections = testPaperData.sections
-          ? parseSections(testPaperData.sections)
-          : [
-              {
-                name: "All Questions",
-                start: 1,
-                end: testPaperData.questions || 0,
-              },
-            ];
-        setSections(parsedSections);
-
-        if (testPaperData.duration) {
-          setTimeLeft(testPaperData.duration * 60);
-        }
-      }
-
-      if (Array.isArray(possibleData)) {
-        const fetchedQuestions = possibleData.map((q) => ({
-          ...q,
-          question: stripHTML(q.question),
-          options: (q.options || [])
-            .map((opt) => stripHTML(opt))
-            .filter((opt) => opt && opt.trim() !== ""),
-        }));
-
-        setQuestions(fetchedQuestions);
-
-        const initialStatus = {};
-        fetchedQuestions.forEach((q) => {
-          initialStatus[q.id] = "not-visited";
-        });
-        if (fetchedQuestions.length > 0) {
-          initialStatus[fetchedQuestions[0].id] = "not-answered";
-        }
-        setQuestionStatus(initialStatus);
-      }
-    } catch (e) {
-      const errorMessage =
-        e.response?.data?.message || e.message || "Failed to fetch test data.";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [api, paperId, authState?.accessToken, stripHTML, parseSections]);
-
-  const saveTimeoutRef = useRef(null);
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const popupRef = useRef();
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (popupRef.current && !popupRef.current.contains(event.target)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [api, paperId, answers, navigate, currentQuestion]);
 
   useEffect(() => {
     if (!isPaused && timeLeft > 0 && !loading && !isTestCompleted) {
-      const timerInterval = setInterval(() => {
+      const timer = setInterval(() => {
         setTimeLeft((prev) => {
-          const newTime = prev > 0 ? prev - 1 : 0;
-
-          if (newTime <= 600 && timerColor !== "error.main") {
-            setTimerColor("error.main");
-          } else if (
-            newTime <= 1200 &&
-            newTime > 600 &&
-            timerColor !== "warning.main"
-          ) {
-            setTimerColor("warning.main");
-          } else if (newTime > 1200 && timerColor !== "inherit") {
-            setTimerColor("inherit");
-          }
-
-          return newTime;
+          const v = prev > 0 ? prev - 1 : 0;
+          if (v <= 600) setTimerColor("error.main");
+          else if (v <= 1200) setTimerColor("warning.main");
+          else setTimerColor("inherit");
+          return v;
         });
       }, 1000);
-      return () => clearInterval(timerInterval);
+      return () => clearInterval(timer);
     }
-  }, [timeLeft, isPaused, loading, isTestCompleted, timerColor]);
+  }, [timeLeft, isPaused, loading, isTestCompleted]);
+
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(
+      2,
+      "0"
+    )}:${String(s).padStart(2, "0")}`;
+  };
+  const timerValue = useMemo(() => formatTime(timeLeft), [timeLeft]);
 
   useEffect(() => {
     if (
@@ -968,7 +1306,6 @@ const Page3 = () => {
     ) {
       (async () => {
         await confirmSubmit();
-        navigate(`/page4/`);
       })();
     }
   }, [
@@ -977,20 +1314,13 @@ const Page3 = () => {
     questions.length,
     isTestCompleted,
     confirmSubmit,
-    navigate,
   ]);
 
   useEffect(() => {
     if (sections.length > 0) {
-      const currentQuestionNumber = currentQuestionIndex + 1;
-      const foundSection = sections.find(
-        (section) =>
-          currentQuestionNumber >= section.start &&
-          currentQuestionNumber <= section.end
-      );
-      if (foundSection) {
-        setCurrentSectionName(foundSection.name);
-      }
+      const n = currentQuestionIndex + 1;
+      const sec = sections.find((s) => n >= s.start && n <= s.end);
+      if (sec) setCurrentSectionName(sec.name);
     }
   }, [currentQuestionIndex, sections]);
 
@@ -1000,6 +1330,17 @@ const Page3 = () => {
     }
   }, [authState?.accessToken, paperId, fetchAllData]);
 
+  const popupRef = useRef();
+  useEffect(() => {
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const handleSectionClick = useCallback(
     (startQuestionNumber) => {
       navigateToQuestion(startQuestionNumber - 1);
@@ -1007,18 +1348,20 @@ const Page3 = () => {
     [navigateToQuestion]
   );
 
-  const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
-  const toggleMenu = useCallback(() => setMenuOpen((prev) => !prev), []);
+  const toggleSidebar = useCallback(() => setSidebarOpen((p) => !p), []);
+  const toggleMenu = useCallback(() => setMenuOpen((p) => !p), []);
+ 
 
   if (isTestCompleted) {
     return (
       <ErrorBoundary>
         <ThemeProvider theme={theme}>
-          <CompletionScreen paperId={paperId} navigate={navigate} />
+          <CompletionScreen navigate={navigate} />
         </ThemeProvider>
       </ErrorBoundary>
     );
   }
+
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
@@ -1036,6 +1379,8 @@ const Page3 = () => {
             currentQuestionNumber={currentQuestionIndex + 1}
             onQuestionSelect={(qNum) => navigateToQuestion(qNum - 1)}
             authState={authState}
+            onSidebarToggle={toggleSidebar}
+            paperId={paperId}
           />
 
           <MainContainer>
@@ -1046,7 +1391,9 @@ const Page3 = () => {
                     question={currentQuestion}
                     index={currentQuestionIndex}
                     answers={answers}
-                    onAnswerSelect={handleAnswerSelect}
+                    onSingleSelect={onSingleSelect}
+                    onMultiToggle={onMultiToggle}
+                    onTextChange={onTextChange}
                   />
                 ) : (
                   <Box
@@ -1087,8 +1434,9 @@ const Page3 = () => {
                   navigateToQuestion={navigateToQuestion}
                 />
               </Box>
-              <SidebarButtons />
+              <SidebarButtons navigate={navigate} paperId={paperId} />
             </RightSidebar>
+            <SidebarOverlay open={sidebarOpen} onClick={toggleSidebar} />
           </MainContainer>
 
           <BottomNav elevation={3}>
@@ -1114,7 +1462,17 @@ const Page3 = () => {
               <Button
                 variant="outlined"
                 onClick={clearResponse}
-                disabled={!answers[currentQuestion?.id]}
+                disabled={
+                  !(
+                    answers[currentQuestion?.id] !== undefined &&
+                    answers[currentQuestion?.id] !== null &&
+                    ((Array.isArray(answers[currentQuestion?.id]) &&
+                      answers[currentQuestion?.id].length > 0) ||
+                      (typeof answers[currentQuestion?.id] === "string" &&
+                        String(answers[currentQuestion?.id]).trim() !== "") ||
+                      typeof answers[currentQuestion?.id] === "number")
+                  )
+                }
                 sx={{
                   display: { xs: "none", md: "flex" },
                   whiteSpace: "nowrap",
@@ -1180,7 +1538,7 @@ const Page3 = () => {
                         setMenuOpen(false);
                       }}
                     >
-                      Submit
+                      Submit Test
                     </Button>
                     <Button
                       variant="outlined"
@@ -1197,6 +1555,19 @@ const Page3 = () => {
                         clearResponse();
                         setMenuOpen(false);
                       }}
+                      disabled={
+                        !(
+                          answers[currentQuestion?.id] !== undefined &&
+                          answers[currentQuestion?.id] !== null &&
+                          ((Array.isArray(answers[currentQuestion?.id]) &&
+                            answers[currentQuestion?.id].length > 0) ||
+                            (typeof answers[currentQuestion?.id] ===
+                              "string" &&
+                              String(answers[currentQuestion?.id]).trim() !==
+                                "") ||
+                            typeof answers[currentQuestion?.id] === "number")
+                        )
+                      }
                     >
                       Clear Response
                     </Button>
@@ -1208,21 +1579,17 @@ const Page3 = () => {
             <Box
               sx={{
                 display: "flex",
-                gap: 8,
+                gap: 2,
                 alignItems: "center",
-                marginLeft: "2px",
-                justifyContent: { xs: "flex-end", md: "space-between" },
+                justifyContent: "flex-end",
               }}
             >
               <Button
                 variant="contained"
                 color="primary"
                 onClick={saveAndNext}
-                sx={{
-                  whiteSpace: "nowrap",
-                  display: { xs: "flex", md: "flex" },
-                }}
                 endIcon={<ArrowForward />}
+                sx={{ marginRight: 6 }}
                 disabled={currentQuestionIndex === questions.length - 1}
               >
                 Save & Next
@@ -1231,10 +1598,7 @@ const Page3 = () => {
               <Button
                 variant="contained"
                 color="error"
-                sx={{
-                  display: { xs: "none", md: "block", marginRight: "20px" },
-                  whiteSpace: "nowrap",
-                }}
+                sx={{ display: { xs: "none", md: "block", marginRight: 6 } }}
                 onClick={handleSubmitTest}
               >
                 Submit Test
@@ -1246,7 +1610,6 @@ const Page3 = () => {
             open={submitModalOpen}
             onClose={() => setSubmitModalOpen(false)}
             aria-labelledby="submit-modal-title"
-            aria-describedby="submit-modal-description"
           >
             <Box
               sx={{
@@ -1260,38 +1623,30 @@ const Page3 = () => {
                 p: 4,
                 borderRadius: 2,
                 textAlign: "center",
-                outline: "none",
               }}
             >
-              <Typography id="submit-modal-title" variant="h6" component="h2">
+              <Typography id="submit-modal-title" variant="h6">
                 Confirm Submission
               </Typography>
-              <Typography id="submit-modal-description" sx={{ mt: 2 }}>
-                Are you sure you want to submit the test? You can also retry if
-                you have time left.
+              <Typography sx={{ mt: 2 }}>
+                Are you sure you want to submit? You cannot change your answers
+                after this.
               </Typography>
               <Box
-                sx={{
-                  mt: 3,
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: 2,
-                }}
+                sx={{ mt: 3, display: "flex", justifyContent: "center", gap: 2 }}
               >
                 <Button
                   variant="outlined"
                   onClick={() => setSubmitModalOpen(false)}
-                  sx={{ minWidth: 100 }}
                 >
-                  Cancel
+                  Go Back
                 </Button>
                 <Button
                   variant="contained"
                   color="error"
                   onClick={confirmSubmit}
-                  sx={{ minWidth: 100 }}
                 >
-                  Submit
+                  Confirm & Submit
                 </Button>
               </Box>
             </Box>
@@ -1302,4 +1657,16 @@ const Page3 = () => {
   );
 };
 
-export default Page3;
+
+const Page3WithMathJax = () => (
+  <MathJaxContext
+    version={3}
+    config={mathJaxConfig}
+    onError={(error) => console.error('MathJax error:', error)}
+    onLoad={() => console.log('MathJax loaded successfully')}
+  >
+    <Page3 />
+  </MathJaxContext>
+);
+
+export default Page3WithMathJax;

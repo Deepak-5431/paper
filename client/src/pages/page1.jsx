@@ -49,7 +49,7 @@ const Page1 = () => {
   const navigate = useNavigate();
   const { setAuthState } = useUser();
 
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [ setIsLoggedIn] = useState(false);
   const [loginOpen, setLoginOpen] = useState(true);
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -103,7 +103,7 @@ const Page1 = () => {
       }
 
     } catch (err) {
-      setLoginError(err.response?.data?.message || "Login failed. Please try again.");
+      
     } finally {
       setLoading(false);
     }
@@ -162,7 +162,7 @@ const Page1 = () => {
         </form>
       </Dialog>
 
-      
+     
         <Box sx={{
           display: 'flex',
           justifyContent: 'center',
