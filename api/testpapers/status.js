@@ -1,6 +1,5 @@
 import axios from "axios";
-
-const API_BASE2_URL = "https://test.iblib.com/api";
+const API_BASE2_URL = process.env.API_BASE2_URL;
 
 const DEFAULT_HEADERS = (req) => ({
   'Authorization': req.headers.authorization || '',
