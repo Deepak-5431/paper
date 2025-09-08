@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.IBLIB_BASE_URL; // ✅ must match Vercel env key
+const API_BASE_URL = process.env.IBLIB_BASE_URL; 
 
 const DEFAULT_HEADERS = (req) => ({
   'Authorization': req.headers.authorization || '',
@@ -15,8 +15,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log("🔌 Proxying login request to:", `${API_BASE_URL}/login`);
-    console.log("📦 Body:", req.body);
+    console.log(" Proxying login request to:", `${API_BASE_URL}/login`);
+    console.log(" Body:", req.body);
 
     const { data } = await axios.post(
       `${API_BASE_URL}/login`,
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (error) {
-    console.error("❌ Login proxy error:", error.response?.data || error.message);
+    console.error(" Login proxy error:", error.response?.data || error.message);
 
     return res.status(error.response?.status || 500).json({
       message: error.response?.data?.message || "Proxy login failed",

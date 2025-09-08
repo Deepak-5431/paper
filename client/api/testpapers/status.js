@@ -14,13 +14,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch all test papers
+    
     const allPapersResponse = await axios.get(`${API_BASE_URL}/study/testpapers/`, {
       headers: DEFAULT_HEADERS(req),
     });
     const allPapers = allPapersResponse.data;
 
-    // Fetch details for each paper in parallel
+    
     const detailPromises = allPapers.map(paper =>
       axios.get(`${API_BASE2_URL}/study/testpaper/${paper.id}`, {
         headers: DEFAULT_HEADERS(req),
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
     const detailResponses = await Promise.all(detailPromises);
 
-    // Merge completion status into all papers
+    
     const papersWithStatus = allPapers.map((paper, index) => {
       const detailedPaper = detailResponses[index].data;
       return {
