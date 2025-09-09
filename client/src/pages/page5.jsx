@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
@@ -24,8 +24,6 @@ import { ArrowBack, ArrowForward, CheckCircleOutline, CancelOutlined, Lens } fro
 import { styled } from "@mui/material/styles";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { MathJaxContext, MathJax } from "better-react-mathjax";
-
-const API_BASE_URL = "https://test.iblib.com";
 
 const theme = createTheme({
   palette: {
@@ -75,8 +73,6 @@ const translateMathInHtml = (htmlString) => {
 
 
     const pureMathLike = /^[0-9A-Za-z()\s\.\+\-\\/\*\^_{}]+$/.test(latexStr);
-    const containsAlpha = /[A-Za-z]/.test(latexStr);
-    const containsDigits = /[0-9]/.test(latexStr);
     if (!pureMathLike || (latexStr.length <= 3 && /[^0-9]/.test(latexStr))) {
       const safe = latexStr.replace(/[{}]/g, (m) => `\\${m}`);
       return `\\text{${safe}}`;
@@ -89,7 +85,6 @@ const translateMathInHtml = (htmlString) => {
     
     latexStr = latexStr.replace(/sqrt(\d+)/gi, '\\sqrt{$1}');
 
-    
     const fracMatch = latexStr.match(/^([0-9A-Za-z\\.()+-]+)\/?\(?([0-9A-Za-z\\.()+-]+)\)?$/);
     if (fracMatch && latexStr.includes('/')) {
       let numerator = fracMatch[1].trim();
@@ -101,11 +96,9 @@ const translateMathInHtml = (htmlString) => {
       }
     }
 
-   
     if (/^".+"$/.test(latexStr)) {
       latexStr = '\\text{' + latexStr.replace(/^"|"$/g, '') + '}';
     }
-
     
     if (/^\$.*\$$/.test(latexStr) || /^\\\(.+\\\)$/.test(latexStr) || /^\\\[.+\\\]$/.test(latexStr)) {
       return latexStr;
@@ -117,7 +110,6 @@ const translateMathInHtml = (htmlString) => {
     
     const processedHtml = htmlString.replace(/`([^`]+)`/g, (match, content) => {
         const latex = convertToLatex(content);
-        
         return `$${latex}$`;
     });
 
@@ -129,7 +121,7 @@ const processHTMLContent = (html) => {
   if (!html) return { text: "", image: null };
   const imgMatch = html.match(/<img[^>]+src=["']([^"'>]+)["']/i);
   const image = imgMatch ? imgMatch[1] : null;
-  const text = html.replace(/<img[^>]*>/gi, "").replace(/<[^>]+>/g, "").trim();
+  const text = html.replace(/<img[^>]*>/gi, "").replace(/<[^>]+>/g, "").replace(/`/g, "").trim();
   return { text, image };
 };
 
@@ -162,6 +154,14 @@ const QuestionContentResults = ({ question }) => {
   };
 
   const isCorrectAnswer = (index) => Array.isArray(question.correctAnswer) ? question.correctAnswer.includes(index) : Number(question.correctAnswer) === index;
+  
+  const getImageUrl = (relativePath) => {
+    if (!relativePath) return "";
+    if (relativePath.startsWith("http") || relativePath.startsWith("data:")) {
+      return relativePath;
+    }
+    return new URL(relativePath, import.meta.env.VITE_API_BASE_URL).href;
+  };
 
   return (
     <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2 }}>
@@ -185,7 +185,7 @@ const QuestionContentResults = ({ question }) => {
         <MathJax dynamic>
           <div dangerouslySetInnerHTML={{ __html: translateMathInHtml(question.questionHtml) }} />
         </MathJax>
-        {question.questionImage && <Box sx={{ mt: 2 }}><img src={question.questionImage.startsWith('http') ? question.questionImage : `${API_BASE_URL}${question.questionImage}`} alt="question" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px' }} /></Box>}
+        {question.questionImage && <Box sx={{ mt: 2 }}><img src={getImageUrl(question.questionImage)} alt="question" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '4px' }} /></Box>}
       </Box>
 
       {question.kind === 'text' ? (
@@ -224,7 +224,7 @@ const QuestionContentResults = ({ question }) => {
                 }}
                 control={
                   <ControlComponent
-                    checked={userSelected}
+                    checked={userSelected || isCorrect} // Show both selections
                     color={controlColor}
                     sx={{ pt: 1 }}
                   />
@@ -250,9 +250,7 @@ const QuestionContentResults = ({ question }) => {
           </Typography>
           <MathJax dynamic>
             {(() => {
-              
               const explanationWithoutImage = question.explanation.replace(/<img[^>]*>/, "");
-             
               return <div dangerouslySetInnerHTML={{ __html: translateMathInHtml(explanationWithoutImage) }} />;
             })()}
           </MathJax>
@@ -276,12 +274,39 @@ const ResultStatusLegend = () => (
 const Page5Internal = () => {
   const { paperId } = useParams();
   const navigate = useNavigate();
-  const { authState } = useUser();
+  const { authState, setAuthState } = useUser();
   const [questions, setQuestions] = useState([]);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_API_BASE_URL,
+      timeout: 15000
+    });
+    instance.interceptors.request.use(
+      (config) => {
+        if (authState?.accessToken) {
+          config.headers.Authorization = authState.accessToken;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+    instance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          setAuthState(null);
+        }
+        return Promise.reject(error);
+      }
+    );
+    return instance;
+  }, [authState?.accessToken, setAuthState]);
+
 
   const questionStatus = useMemo(() => {
     if (!questions || questions.length === 0) {
@@ -299,13 +324,13 @@ const Page5Internal = () => {
     }, {});
   }, [questions]);
 
-  const fetchData = useCallback(async (token) => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [resultsRes, paperRes] = await Promise.all([
-        axios.get(`/api/questions/${paperId}?isCompleted=1`, { headers: { Authorization: token } }),
-        axios.get(`/api/testpaper/${paperId}`, { headers: { Authorization: token } })
+        api.get(`/api/questions/${paperId}?isCompleted=1`),
+        api.get(`/api/testpaper/${paperId}`)
       ]);
       
       const rawQuestions = Array.isArray(resultsRes.data) ? resultsRes.data : [];
@@ -320,7 +345,6 @@ const Page5Internal = () => {
       }
       
       const reviewQuestions = rawQuestions.map((q, index) => {
-        const { image: questionImage } = processHTMLContent(q.question);
         const options = (q.options || []).map(optStr => ({
             html: optStr,
             text: processHTMLContent(optStr).text
@@ -331,45 +355,44 @@ const Page5Internal = () => {
         let userAnswer = null;
         if (q.selectedAnswers && q.selectedAnswers.length > 0 && q.selectedAnswers[0] !== "") {
             if (kind === 'multiple') {
-                if (q.selectedAnswers.length > 1) userAnswer = q.selectedAnswers.map(Number);
-                else userAnswer = q.selectedAnswers[0].split(',').map(Number);
+                userAnswer = q.selectedAnswers[0].split(',').map(Number);
             } else {
-                const ansString = q.selectedAnswers[0];
-                userAnswer = kind === 'radio' ? Number(ansString) : ansString;
+                // =========== THE FIX IS HERE ===========
+                // This now correctly handles 'single' and 'radio' by converting the string to a number.
+                userAnswer = (kind === 'single' || kind === 'radio') ? Number(q.selectedAnswers[0]) : q.selectedAnswers[0];
             }
         }
-        
+
         let correctAnswer = null;
-        const correctAnswersFromApi = (q.answers || []).filter(ans => ans && ans.trim());
-        if (correctAnswersFromApi.length > 0) {
+        const correctAnswerFromApi = (q.answers || []).find(ans => ans && ans.trim());
+        if (correctAnswerFromApi) {
+            const correctAnswerText = processHTMLContent(correctAnswerFromApi).text;
             if (kind === 'text') {
-                correctAnswer = processHTMLContent(correctAnswersFromApi[0]).text;
-            } else if (kind === 'multiple') {
-                correctAnswer = correctAnswersFromApi.map(ans => options.findIndex(opt => opt.text === processHTMLContent(ans).text)).filter(idx => idx !== -1);
-            } else {
-                const idx = options.findIndex(opt => opt.text === processHTMLContent(correctAnswersFromApi[0]).text);
-                if (idx !== -1) correctAnswer = idx;
+                correctAnswer = correctAnswerText;
+            } else { 
+                const foundIndex = options.findIndex(opt => opt.text === correctAnswerText);
+                if (foundIndex !== -1) {
+                    correctAnswer = foundIndex;
+                }
             }
         }
         
-        const isAttempted = userAnswer !== null;
         let isCorrect = false;
-        if (isAttempted) {
-          if (kind === "multiple") {
-            const userSet = new Set(userAnswer);
-            const correctSet = new Set(correctAnswer);
-            isCorrect = userSet.size === correctSet.size && [...userSet].every(ans => correctSet.has(ans));
-          } else if (kind === 'text') {
-            isCorrect = String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
-          } else {
-            isCorrect = Number(userAnswer) === Number(correctAnswer);
-          }
+        const isAttempted = userAnswer !== null;
+        if (isAttempted && correctAnswer !== null) {
+            if (kind === 'multiple') {
+                const userSet = new Set(userAnswer);
+                const correctSet = new Set(Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]);
+                isCorrect = userSet.size === correctSet.size && [...userSet].every(ans => correctSet.has(ans));
+            } else { 
+                isCorrect = userAnswer === correctAnswer;
+            }
         }
 
         return { 
-            ...q, 
+            ...q,
             questionHtml: q.question, 
-            questionImage, 
+            questionImage: processHTMLContent(q.question).image, 
             options, 
             kind, 
             userAnswer, 
@@ -380,6 +403,7 @@ const Page5Internal = () => {
             status: isAttempted ? (isCorrect ? 'correct' : 'incorrect') : 'not-answered'
         };
       });
+
       setQuestions(reviewQuestions);
     } catch (err) {
       console.error("Error fetching results data:", err);
@@ -387,11 +411,11 @@ const Page5Internal = () => {
     } finally {
       setLoading(false);
     }
-  }, [paperId]);
+  }, [paperId, api]); 
 
   useEffect(() => {
     if (authState?.accessToken) {
-      fetchData(authState.accessToken);
+      fetchData();
     } else if (authState === null) {
       setError('Please login to view results');
       setLoading(false);
@@ -402,7 +426,7 @@ const Page5Internal = () => {
   if (error) return <Box sx={{ p: 2, mt: 4 }}><Alert severity="error">{error}</Alert></Box>;
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentSectionName = sections.find(s => currentQuestionIndex + 1 >= s.start && currentQuestionIndex + 1 <= s.end)?.name;
+  const currentSectionName = sections.find(s => currentQuestionIndex + 1 >= s.start && s.end >= currentQuestionIndex + 1)?.name;
 
   return (
     <ThemeProvider theme={theme}>

@@ -76,7 +76,8 @@ const Page1 = () => {
       appVersionCode: "1"
     };
 
-    const { data } = await axios.post("/api/login", payload); 
+const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/login`;
+const { data } = await axios.post(apiUrl, payload);
 
     if (data.access_token) {
       const userData = {

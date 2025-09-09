@@ -43,9 +43,9 @@ function App() {
       {
         path: "/result/:paperId",
         element: (
-          <ProtectedRoute>
+         // <ProtectedRoute>
             <Page5 />
-          </ProtectedRoute>
+         // </ProtectedRoute>
         ),
       },
       {

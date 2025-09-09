@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo} from 'react'; 
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Button, CircularProgress, Alert, TextField, CardMedia, Fade,
@@ -16,7 +16,34 @@ const Page7 = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCheckingStatus, setIsCheckingStatus] = useState(null); 
   const navigate = useNavigate();
-  const { authState } = useUser();
+  const { authState, setAuthState } = useUser(); 
+
+  
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_API_BASE_URL,
+      timeout: 15000
+    });
+    instance.interceptors.request.use(
+      (config) => {
+        if (authState?.accessToken) {
+          config.headers.Authorization = authState.accessToken;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+    instance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          setAuthState(null); 
+        }
+        return Promise.reject(error);
+      }
+    );
+    return instance;
+  }, [authState?.accessToken, setAuthState]);
 
   useEffect(() => {
     const fetchTestPapers = async () => {
@@ -24,17 +51,13 @@ const Page7 = () => {
       setError(null);
 
       try {
-        const token = authState.accessToken;
         
-        const response = await axios.get('/api/testpapers', {
-          headers: { 'Authorization': token }
-        });
+        const response = await api.get('/api/testpapers');
         
-       
         setTestPapers(response.data);
 
       } catch (e) {
-        
+        setError("Failed to load test papers. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -46,29 +69,25 @@ const Page7 = () => {
       setError("You must be logged in to view test papers.");
       setLoading(false);
     }
-  }, [authState]);
+  }, [authState, api]); 
 
   
   const handleStartTest = async (paperId) => {
     setIsCheckingStatus(paperId); 
     try {
-      const token = authState.accessToken;
-      const response = await axios.get(`/api/testpaper/${paperId}`, {
-         headers: { 'Authorization': token }
-      });
+      
+      const response = await api.get(`/api/testpaper/${paperId}`);
 
       const isCompleted = response.data?.isCompleted == "1";
 
       if (isCompleted) {
-        
         navigate(`/page6/${paperId}`);
       } else {
-       
         localStorage.setItem("qp_code", paperId);
         navigate(`/page2/${paperId}`);
       }
     } catch (err) {
-      
+      setError("Could not check test status. Please try again.");
     } finally {
       setIsCheckingStatus(null); 
     }
@@ -156,7 +175,6 @@ const Page7 = () => {
                       borderRadius: 3,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                    
                       '&:hover': {
                         transform: 'translateY(-5px)',
                         boxShadow: '0 10px 20px rgba(0,0,0,0.1)',

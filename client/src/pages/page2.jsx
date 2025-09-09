@@ -111,8 +111,10 @@ const Page2 = () => {
       setError(null);
       try {
         const token = authState.accessToken;
-        const response = await axios.get(`/api/testpaper/${paperId}`, {
-          headers: { 'Authorization': token }
+        const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/testpaper/${paperId}`;
+        const response = await axios.get(apiUrl, {
+        headers: { 'Authorization': token }
+
         });
         
         const details = response.data;

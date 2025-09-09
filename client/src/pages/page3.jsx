@@ -9,7 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
 import Header2 from "../components/header2";
-import { Box,  Typography,  Button,  Radio,  RadioGroup,  Checkbox,  FormControlLabel,  Select,  MenuItem,  IconButton,  Grid,  Paper,  Modal,  Avatar,  Tooltip, CircularProgress,
+import { Box,   Typography,   Button,   Radio,   RadioGroup,   Checkbox,   FormControlLabel,   Select,   MenuItem,   IconButton,   Grid,   Paper,   Modal,   Avatar,   Tooltip, CircularProgress,
   Alert, TextField,
 } from "@mui/material";
 import {
@@ -25,7 +25,7 @@ import { styled } from "@mui/material/styles";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { MathJaxContext, MathJax } from "better-react-mathjax";
 
-const API_BASE_URL = "https://test.iblib.com";
+
 
 const mathJaxConfig = {
   loader: { 
@@ -561,7 +561,7 @@ const CompletionScreen = React.memo(({ navigate }) => (
 const MathContent = React.memo(({ htmlContent }) => {
   if (!htmlContent) return null;
 
- 
+  
   const convertApiMathToLatex = (apiString) => {
     
     let cleanStr = apiString.replace(/`/g, "").replace(/<br\s*\/?>/gi, "").trim();
@@ -604,10 +604,10 @@ const MathContent = React.memo(({ htmlContent }) => {
   
   return (
       <MathJax dynamic>
-          <div
-            style={{ lineHeight: 1.8 }}
-            dangerouslySetInnerHTML={{ __html: finalContent }}
-          />
+        <div
+          style={{ lineHeight: 1.8 }}
+          dangerouslySetInnerHTML={{ __html: finalContent }}
+        />
       </MathJax>
   );
 });
@@ -637,7 +637,8 @@ const QuestionContent = React.memo(
       if (relativePath.startsWith("http") || relativePath.startsWith("data:")) {
         return relativePath;
       }
-      return new URL(relativePath, API_BASE_URL).href;
+      
+      return new URL(relativePath, import.meta.env.VITE_API_BASE_URL).href;
     };
 
     return (
@@ -756,7 +757,7 @@ const QuestionContent = React.memo(
                           ({String.fromCharCode(65 + opt.originalIndex)})
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-                         
+                          
                           <MathContent htmlContent={opt.html} />
                           {opt.image && (
                             <img
@@ -831,7 +832,7 @@ const QuestionContent = React.memo(
               )}
             </Box>
           )}
-           {question.kind === "text" && (
+            {question.kind === "text" && (
             <Box sx={{ mt: 1, maxWidth: 640 }}>
               <TextField
                 fullWidth
@@ -880,7 +881,11 @@ const Page3 = () => {
   );
 
   const api = useMemo(() => {
-    const instance = axios.create({ baseURL: "/api", timeout: 15000 });
+   
+    const instance = axios.create({
+      baseURL: import.meta.env.VITE_API_BASE_URL,
+      timeout: 15000
+    });
     instance.interceptors.request.use(
       (config) => {
         if (authState?.accessToken) {
@@ -948,12 +953,9 @@ const Page3 = () => {
     setError(null);
 
     try {
-      const questionsRes = await axios.get(`/api/questions/${paperId}`, {
-        headers: { Authorization: authState.accessToken },
-      });
-      const testPaperRes = await axios.get(`/api/testpaper/${paperId}`, {
-        headers: { Authorization: authState.accessToken },
-      });
+     
+      const questionsRes = await api.get(`/api/questions/${paperId}`);
+      const testPaperRes = await api.get(`/api/testpaper/${paperId}`);
 
       const fetchedQuestionsData = Array.isArray(questionsRes.data)
         ? questionsRes.data
@@ -1006,14 +1008,15 @@ const Page3 = () => {
     } finally {
       setLoading(false);
     }
-  }, [paperId, authState]);
+  }, [paperId, authState, api]); 
   
   const saveCurrentAnswer = useCallback(async () => {
     const q = currentQuestion;
     if (!q) return;
     const payload = buildResponsePayload(q, answers[q.id]);
     try {
-      await api.post(`/testpaper/questions/${paperId}`, payload);
+      
+      await api.post(`/api/testpaper/questions/${paperId}`, payload);
     } catch (err) {
       console.error("Failed to save current answer:", err);
     }
@@ -1196,7 +1199,7 @@ const Page3 = () => {
 
     try {
       const payload = buildResponsePayload(q, "");
-      await api.post(`/testpaper/questions/${paperId}`, payload);
+      await api.post(`/api/testpaper/questions/${paperId}`, payload);
     } catch (err) {
       console.error("Failed to clear response on server:", err);
     }
@@ -1206,7 +1209,7 @@ const Page3 = () => {
     const q = currentQuestion;
     if (!q) return;
     const payload = buildResponsePayload(q, answers[q.id]);
-    api.post(`/testpaper/questions/${paperId}`, payload).catch(() => {
+    api.post(`/api/testpaper/questions/${paperId}`, payload).catch(() => {
       setError("Failed to save answer (mark for review). Please try again.");
     });
     setQuestionStatus((prev) => {
@@ -1245,7 +1248,7 @@ const Page3 = () => {
       const lastQuestion = currentQuestion;
       const lastResponse = answers[lastQuestion.id] || "";
 
-      await api.post(`/submit/${paperId}`, {
+      await api.post(`/api/submit/${paperId}`, {
         data: lastQuestion.qid,
         response: String(lastResponse),
       });
@@ -1350,7 +1353,7 @@ const Page3 = () => {
 
   const toggleSidebar = useCallback(() => setSidebarOpen((p) => !p), []);
   const toggleMenu = useCallback(() => setMenuOpen((p) => !p), []);
- 
+  
 
   if (isTestCompleted) {
     return (
