@@ -51,9 +51,7 @@ function App() {
       {
         path: "/page6/:paperId",
         element: (
-          
             <Page6 />
-         
         ),
       },
       {
