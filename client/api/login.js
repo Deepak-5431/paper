@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = process.env.IBLIB_BASE_URL; 
+const VITE_API_BASE_URL = process.env.IBLIB_BASE_URL; 
 
 const DEFAULT_HEADERS = (req) => ({
   'Authorization': req.headers.authorization || '',
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log(" Proxying login request to:", `${API_BASE_URL}/login`);
+    console.log(" Proxying login request to:", `${VITE_API_BASE_URL}/login`);
     console.log(" Body:", req.body);
 
     const { data } = await axios.post(
