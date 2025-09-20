@@ -3,10 +3,12 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Button, ThemeProvider, createTheme, CssBaseline, Dialog, DialogTitle,
+  Box, Button,ThemeProvider, createTheme, CssBaseline, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, CircularProgress, Alert
 } from '@mui/material';
 
+
+ 
 const theme = createTheme({
   palette: {
     primary: {
@@ -47,7 +49,7 @@ const Page1 = () => {
   const navigate = useNavigate();
   const { setAuthState } = useUser();
 
-  const [isloggedin, setIsLoggedIn] = useState(false);
+  const [ isloggedin,setIsLoggedIn] = useState(false);
   const [loginOpen, setLoginOpen] = useState(true);
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -59,64 +61,54 @@ const Page1 = () => {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setLoginError("");
+  e.preventDefault();  
+  setLoading(true);
+  setLoginError("");
 
-    try {
-      const payload = {
-        user: loginData.username,
-        password: loginData.password,
-        fcmId: "60",
-        androidVersion: "9",
-        androidVersionCode: "28",
-        appVersion: "1.0",
-        appVersionCode: "1"
+  try {
+    const payload = {
+      user: loginData.username,
+      password: loginData.password,
+      fcmId: "60",
+      androidVersion: "9",
+      androidVersionCode: "28",
+      appVersion: "1.0",
+      appVersionCode: "1"
+    };
+
+const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/login`;
+const { data } = await axios.post(apiUrl, payload);
+
+    if (data.access_token) {
+      const userData = {
+        id: data.userId,
+        username: data.userName,
+        name: `${data.firstName} ${data.lastName}`,
+        role: data.loginType,
+        school: data.schoolName,
+        image: data.loginImage
       };
 
+      setAuthState({
+        user: userData,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      });
 
-      const apiUrl = '/api/login'; 
-      const { data } = await axios.post(apiUrl, payload);
-
-      if (data.access_token) {
-        const userData = {
-          id: data.userId,
-          username: data.userName,
-          name: `${data.firstName} ${data.lastName}`,
-          role: data.loginType,
-          school: data.schoolName,
-          image: data.loginImage
-        };
-
-        setAuthState({
-          user: userData,
-          accessToken: data.access_token,
-          refreshToken: data.refresh_token,
-        });
-
-        navigate('/select-test');
-        setIsLoggedIn(true);
-        setLoginOpen(false);
-        setLoginData({ username: "", password: "" });
-        setLoginError("");
-      } else {
-        setLoginError("Invalid credentials or missing token.");
-      }
-    } catch (err) {
-      console.error("Login API call failed:", err.response?.data || err.message || err);
-      if (err.response && err.response.data && err.response.data.message) {
-        setLoginError(err.response.data.message);
-      } else if (err.response && err.response.status) {
-        setLoginError(`Login failed with status ${err.response.status}: ${err.response.statusText || 'Unknown error'}`);
-      } else if (err.request) {
-        setLoginError("Network error: Could not connect to the server.");
-      } else {
-        setLoginError("An unexpected error occurred. Please try again.");
-      }
-    } finally {
-      setLoading(false);
+      navigate('/select-test');
+      setIsLoggedIn(true);
+      setLoginOpen(false);
+      setLoginData({ username: "", password: "" });
+      setLoginError("");
+    } else {
+      setLoginError("Invalid credentials or missing token");
     }
-  };
+  } catch (err) {
+    setLoginError("Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ThemeProvider theme={theme}>
@@ -124,10 +116,11 @@ const Page1 = () => {
 
       <Dialog
         open={loginOpen}
-        onClose={() => {}}
+        onClose={() => { }}
         disableEscapeKeyDown
       >
         <DialogTitle>Login Required to Access Instructions</DialogTitle>
+    
         <form onSubmit={handleLogin}>
           <DialogContent dividers>
             {loginError && <Alert severity="error" sx={{ mb: 2 }}>{loginError}</Alert>}
@@ -158,7 +151,7 @@ const Page1 = () => {
           </DialogContent>
           <DialogActions>
             <Button
-              type="submit"
+              type="submit" 
               color="primary"
               variant="contained"
               disabled={loading}
@@ -169,15 +162,18 @@ const Page1 = () => {
           </DialogActions>
         </form>
       </Dialog>
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: 'background.default'
-      }}>
-        {!loginOpen && <CircularProgress />}
-      </Box>
+
+     
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          backgroundColor: 'background.default'
+        }}>
+          {!loginOpen && <CircularProgress />}
+        </Box>
+      
     </ThemeProvider>
   );
 };
