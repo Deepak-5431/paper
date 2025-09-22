@@ -1263,7 +1263,8 @@ const Page3 = () => {
       localStorage.setItem("submittedPapers", JSON.stringify(submittedPapers));
 
       setIsTestCompleted(true);
-      navigate(`/result/${paperId}`, {
+      //navigate(`/result/${paperId}`, {
+      navigate(`/summary-page/${paperId}`, {
         replace: true,
         state: { userAnswers: answers },
       });

@@ -41,7 +41,11 @@ function App() {
         ),
       },{
          path: "/summary-page/:paperId",
-        element: <Page4 />,
+        element: (
+          <ProtectedRoute>
+            <Page4 />
+          </ProtectedRoute>
+        ),
       },
      
       {

@@ -1,4 +1,4 @@
-import  { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser } from '../context/UserContext';
@@ -160,7 +160,7 @@ const parseSections = (sectionsString) => {
     return sectionsString.split('@@@').map(part => {
       const [name, start, end] = part.split('#@#');
       return {
-        name: name.trim().replace(/\r\n/g, ''), 
+        name: name.trim().replace(/\r\n/g, ''),
         start: parseInt(start, 10),
         end: parseInt(end, 10),
       };
@@ -188,7 +188,7 @@ const Page4 = () => {
 
   const api = useMemo(() => {
     const instance = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL, 
+      baseURL: import.meta.env.VITE_API_BASE_URL,
     });
     instance.interceptors.request.use(
       (config) => {
@@ -221,6 +221,15 @@ const Page4 = () => {
         const paperDetails = paperDetailsRes.data;
         const questionsList = questionsRes.data;
 
+        // --- NEW LOGIC: LOAD STATUS FROM LOCAL STORAGE ---
+        const cachedStatusRaw = localStorage.getItem("questionStatus");
+        const cachedPaperId = localStorage.getItem("currentPaperId");
+        let questionStatus = null;
+        if (cachedStatusRaw && String(cachedPaperId) === String(paperId)) {
+          questionStatus = JSON.parse(cachedStatusRaw);
+        }
+        // --- END OF NEW LOGIC ---
+
         let finalSummary = [];
         const parsedSections = parseSections(paperDetails.sections);
 
@@ -229,6 +238,9 @@ const Page4 = () => {
             acc[sec.name] = {
               questions: (sec.end - sec.start + 1),
               answered: 0,
+              notAnswered: 0,
+              markedForReview: 0,
+              notVisited: 0,
             };
             return acc;
           }, {});
@@ -236,35 +248,85 @@ const Page4 = () => {
           questionsList.forEach((question, index) => {
             const questionNumber = index + 1;
             const section = parsedSections.find(s => questionNumber >= s.start && questionNumber <= s.end);
+            if (!section) return;
 
-            if (section && question.selectedAnswers !== null) {
-              sectionSummaries[section.name].answered++;
+            const status = questionStatus ? questionStatus[question.id] : null;
+
+            if (status) { // If we have detailed status from Local Storage
+                switch (status) {
+                    case 'answered':
+                        sectionSummaries[section.name].answered++;
+                        break;
+                    case 'answered-marked':
+                        sectionSummaries[section.name].answered++;
+                        sectionSummaries[section.name].markedForReview++;
+                        break;
+                    case 'marked':
+                        sectionSummaries[section.name].notAnswered++;
+                        sectionSummaries[section.name].markedForReview++;
+                        break;
+                    case 'not-answered':
+                        sectionSummaries[section.name].notAnswered++;
+                        break;
+                    case 'not-visited':
+                        sectionSummaries[section.name].notVisited++;
+                        break;
+                    default:
+                        sectionSummaries[section.name].notVisited++;
+                }
+            } else { // Fallback logic if no status is found
+                const isAnswered = question.selectedAnswers && question.selectedAnswers.length > 0 && question.selectedAnswers[0] !== "";
+                if (isAnswered) {
+                    sectionSummaries[section.name].answered++;
+                } else {
+                    sectionSummaries[section.name].notAnswered++;
+                }
             }
           });
+          
+          finalSummary = Object.entries(sectionSummaries).map(([sectionName, counts]) => counts);
 
-          finalSummary = Object.entries(sectionSummaries).map(([sectionName, counts]) => ({
-            section: sectionName,
-            questions: counts.questions,
-            answered: counts.answered,
-            notAnswered: counts.questions - counts.answered,
-            markedForReview: 0, 
-            notVisited: 0,       
-          }));
 
-        }
-        else {
-          const totalQuestions = Number(paperDetails.questions) || questionsList.length;
-          const answeredCount = questionsList.filter(q => q.selectedAnswers !== null).length;
-          const notAnsweredCount = totalQuestions - answeredCount;
+        } else { // For tests without sections
+            let summary = {
+                section: paperDetails.name || "Overall Summary",
+                questions: Number(paperDetails.questions) || questionsList.length,
+                answered: 0,
+                notAnswered: 0,
+                markedForReview: 0,
+                notVisited: 0,
+            };
 
-          finalSummary.push({
-            section: paperDetails.name || "Overall Summary",
-            questions: totalQuestions,
-            answered: answeredCount,
-            notAnswered: notAnsweredCount,
-            markedForReview: 0,
-            notVisited: 0,
-          });
+            if (questionStatus) { // If we have detailed status from Local Storage
+                questionsList.forEach(question => {
+                    const status = questionStatus[question.id];
+                    switch (status) {
+                        case 'answered':
+                            summary.answered++;
+                            break;
+                        case 'answered-marked':
+                            summary.answered++;
+                            summary.markedForReview++;
+                            break;
+                        case 'marked':
+                            summary.notAnswered++;
+                            summary.markedForReview++;
+                            break;
+                        case 'not-answered':
+                            summary.notAnswered++;
+                            break;
+                        case 'not-visited':
+                            summary.notVisited++;
+                            break;
+                        default:
+                            summary.notVisited++;
+                    }
+                });
+            } else { // Fallback logic
+                summary.answered = questionsList.filter(q => q.selectedAnswers && q.selectedAnswers.length > 0 && q.selectedAnswers[0] !== "").length;
+                summary.notAnswered = summary.questions - summary.answered;
+            }
+            finalSummary.push(summary);
         }
 
         setSummaryData(finalSummary);
@@ -355,7 +417,7 @@ const Page4 = () => {
         flexDirection: 'column',
         minHeight: '100vh',
         width: '100%',
-        paddingTop: '60px' 
+        paddingTop: '60px'
       }}>
         <Box sx={{
           flex: 1,
@@ -430,9 +492,9 @@ const Page4 = () => {
                     </TableHead>
 
                     <TableBody>
-                      {summaryData.map((row) => (
+                      {summaryData.map((row, index) => (
                         <TableRow
-                          key={row.section}
+                          key={row.section || index}
                           sx={{
                             backgroundColor: 'inherit',
                             '&:last-child td': {
@@ -478,28 +540,13 @@ const Page4 = () => {
                   <Button
                     variant="contained"
                     color="secondary"
-                    onClick={() => navigate(`/result/${paperId}`)} // Ensure you have a result page route
+                    onClick={() => navigate(`/result/${paperId}`)} 
                     sx={{
                       minWidth: { xs: '120px', sm: '150px' }
                     }}
                   >
                     VIEW RESULT
                   </Button>
-
-                  {/*<Button
-                    variant="contained"
-                    onClick={() => navigate('/result/:paperId')} 
-                    sx={{
-                      backgroundColor: '#6c757d',
-                      color: 'white',
-                      minWidth: { xs: '120px', sm: '150px' },
-                      '&:hover': {
-                        backgroundColor: '#5a6268'
-                      }
-                    }}
-                  >
-                    Go To Dashboard
-                  </Button>*/}
                 </Box>
               </>
             )}
