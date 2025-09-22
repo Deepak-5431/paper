@@ -40,7 +40,7 @@ function App() {
           </ProtectedRoute>
         ),
       },{
-         path: "/summary-page",
+         path: "/summary-page/:paperId",
         element: <Page4 />,
       },
      
