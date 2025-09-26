@@ -83,7 +83,7 @@ const Page7 = () => {
       if (isCompleted) {
         navigate(`/page6/${paperId}`);
       } else {
-        localStorage.setItem("qp_code", paperId);
+       // localStorage.setItem("qp_code", paperId);
         navigate(`/page2/${paperId}`);
       }
     } catch (err) {

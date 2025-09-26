@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { UserProvider } from "./context/UserContext";
 import Page1 from "./pages/page1";
 import Page2 from "./pages/page2";
 import Page3 from "./pages/page3";
@@ -16,60 +17,71 @@ const ErrorPage = () => (
 );
 
 function App() {
-  const router = createBrowserRouter(
-    [
-      {
-        path: "/",
-        element: <Page1 />,
-        errorElement: <ErrorPage />,
-      },
-        {
-        path: "/page2/:paperId",
-        element:(
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <Page1 />, // Public route
+      errorElement: <ErrorPage />,
+    },
+    {
+      path: "/page1", 
+      element: <Page1 />, // Public route (same as '/')
+    },
+    {
+      path: "/page2/:paperId",
+      element: (
+        <ProtectedRoute>
+          <Page2 />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/page3/:paperId",
+      element: (
+        <ProtectedRoute>
+          <Page3 />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/summary-page/:paperId",
+      element: (
+        <ProtectedRoute>
+          <Page4 />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/result/:paperId",
+      element: (
+        <ProtectedRoute>
+          <Page5 />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/page6/:paperId",
+      element: (
+        <ProtectedRoute>
+          <Page6 />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/select-test",
+      element: (
+        <ProtectedRoute>
+          <Page7 />
+        </ProtectedRoute>
+      ),
+    },
+  ]);
 
-          <ProtectedRoute>
-            <Page2 />
-            </ProtectedRoute>
-        ) ,
-      },
-      {
-        path: "/page3/:paperId",
-        element: (
-          <ProtectedRoute>
-            <Page3 />
-          </ProtectedRoute>
-        ),
-      },{
-         path: "/summary-page/:paperId",
-        element: (
-          <ProtectedRoute>
-            <Page4 />
-          </ProtectedRoute>
-        ),
-      },
-     
-      {
-        path: "/result/:paperId",
-        element: (
-          
-            <Page5 />
-          
-        ),
-      },
-      {
-        path: "/page6/:paperId",
-        element: (
-            <Page6 />
-        ),
-      },
-      {
-        path: "/select-test",
-        element: <Page7 />,
-      }, 
-    ],
+  return (
+    <UserProvider>
+      <RouterProvider router={router} />
+    </UserProvider>
   );
-
-  return <RouterProvider router={router} />;
 }
 
 export default App;
