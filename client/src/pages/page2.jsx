@@ -52,7 +52,7 @@ const generateInstructions = (details) => {
 
   
  
-  
+  dynamicInstructions.push(`Refresh of page is not allowded.  `);
   
   
   dynamicInstructions.push("The countdown timer at the top of the screen will display the remaining time. The test will submit automatically when the time reaches zero.");

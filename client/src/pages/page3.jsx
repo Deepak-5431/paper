@@ -109,7 +109,7 @@ const MainContainer = styled(Box)(({ theme }) => ({
 }));
 
 const LeftPanel = styled(Box)(({ theme }) => ({
-  width: "1198px",
+  width: "80%",
   flexShrink: 0,
   backgroundColor: theme.palette.background.paper,
   borderRight: `1px solid ${theme.palette.divider}`,
@@ -138,7 +138,7 @@ const ScrollableContent = styled(Box)(({ theme }) => ({
 }));
 
 const RightSidebar = styled(Box)(({ theme, open }) => ({
-  width: "100%",
+  width: "20vw",
   backgroundColor: theme.palette.background.paper,
   display: "flex",
   flexDirection: "column",
@@ -549,7 +549,7 @@ const CompletionScreen = React.memo(({ navigate }) => (
       <Button
         variant="contained"
         startIcon={<Analytics />}
-        onClick={() => navigate("/page4")}
+        onClick={() => navigate(`/summary-page/${paperId}`)}
       >
         View Results
       </Button>
@@ -561,29 +561,30 @@ const CompletionScreen = React.memo(({ navigate }) => (
 const MathContent = React.memo(({ htmlContent }) => {
   if (!htmlContent) return null;
 
-  
   const convertApiMathToLatex = (apiString) => {
-    
-    let cleanStr = apiString.replace(/`/g, "").replace(/<br\s*\/?>/gi, "").trim();
+    // Remove backticks but keep line breaks for options
+    let cleanStr = apiString
+      .replace(/`/g, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .trim();
 
-    
+    // If no math operators, return as is with preserved line breaks
     if (!cleanStr.includes('/') && !cleanStr.includes('sqrt')) {
         return cleanStr; 
     }
-    
 
+    // Handle sqrt notation
     let latexStr = cleanStr.replace(/(\d*)sqrt\((\d+)\)/g, (match, coeff, content) => {
         const coefficient = coeff ? coeff.trim() : '';
         return `${coefficient}\\sqrt{${content}}`;
     });
 
-    
+    // Handle fractions
     const parts = latexStr.split('/');
     if (parts.length === 2) {
         let numerator = parts[0].trim();
         let denominator = parts[1].trim();
 
-        
         if (numerator.startsWith('(') && numerator.endsWith(')')) {
             numerator = numerator.slice(1, -1);
         }
@@ -598,14 +599,16 @@ const MathContent = React.memo(({ htmlContent }) => {
   };
   
   const latexString = convertApiMathToLatex(htmlContent);
-
-
   const finalContent = latexString.includes('\\') ? `$${latexString}$` : latexString;
   
   return (
       <MathJax dynamic>
         <div
-          style={{ lineHeight: 1.8 }}
+          style={{ 
+            lineHeight: 1.8,
+            whiteSpace: 'pre-line',
+            wordBreak: 'break-word'
+          }}
           dangerouslySetInnerHTML={{ __html: finalContent }}
         />
       </MathJax>

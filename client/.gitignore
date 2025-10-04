@@ -27,3 +27,4 @@ shell/
 node_modules/
 .env.development
 .env.production
+dist.zip

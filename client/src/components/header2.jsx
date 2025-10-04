@@ -269,13 +269,13 @@ const Header2 = ({
       </Grid>
     </Box>
   );
-
   const renderSidebarButtons = () => (
     <Box sx={{ mt: 'auto', p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
       
+      
       <Button
         variant="contained"
-        onClick={() => navigate(`/page2/${paperId}`)}
+        onClick={() => {}}
         sx={{
           backgroundColor: 'grey.300',
           color: 'text.primary',
@@ -286,11 +286,12 @@ const Header2 = ({
         Instructions
       </Button>
     </Box>
+    
   );
 
   const drawerContent = (
     <Box sx={{
-      width: 280,
+      width: '40vw',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
