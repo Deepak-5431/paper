@@ -11,7 +11,6 @@ export const UserProvider = ({ children }) => {
   
   const [wasRefreshed, setWasRefreshed] = useState(false);
 
-  // Initialize auth state from sessionStorage - runs ONLY on actual page load
   useEffect(() => {
     const user = JSON.parse(sessionStorage.getItem("user"));
     const accessToken = sessionStorage.getItem("access_token");
@@ -21,28 +20,25 @@ export const UserProvider = ({ children }) => {
       setAuthState({ user, accessToken, refreshToken });
     }
 
-    // Detect ACTUAL page refresh (not SPA navigation)
     const detectPageRefresh = () => {
-      // Method 1: Performance Navigation API
       const navEntries = performance.getEntriesByType('navigation');
       if (navEntries.length > 0 && navEntries[0].type === 'reload') {
         return true;
       }
 
-      // Method 2: Check if page was loaded normally (not from cache)
       return performance.navigation.type === PerformanceNavigation.TYPE_RELOAD;
     };
 
     if (detectPageRefresh()) {
       setWasRefreshed(true);
-      // Auto-clear after 5 seconds
+      
       setTimeout(() => {
         setWasRefreshed(false);
       }, 5000);
     }
-  }, []); // Empty dependency array - runs ONLY on initial page load
+  }, []); 
 
-  // Persist auth state to sessionStorage
+  
   useEffect(() => {
     if (authState.user && authState.accessToken) {
       sessionStorage.setItem("user", JSON.stringify(authState.user));

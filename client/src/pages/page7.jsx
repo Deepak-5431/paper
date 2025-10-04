@@ -46,20 +46,22 @@ const Page7 = () => {
   }, [authState?.accessToken, setAuthState]);
 
   useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
     const fetchTestPapers = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        
-        const response = await api.get('/api/testpapers');
-        
+        const response = await api.get('/api/testpapers', { signal: controller.signal });
+        if (!isMounted) return;
         setTestPapers(response.data);
-
       } catch (e) {
+        if (!isMounted || e?.code === 'ERR_CANCELED') return;
         setError("Failed to load test papers. Please try again later.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
@@ -69,21 +71,24 @@ const Page7 = () => {
       setError("You must be logged in to view test papers.");
       setLoading(false);
     }
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [authState, api]); 
 
   
   const handleStartTest = async (paperId) => {
     setIsCheckingStatus(paperId); 
     try {
-      
       const response = await api.get(`/api/testpaper/${paperId}`);
-
-      const isCompleted = response.data?.isCompleted == "1";
+      const val = response.data?.isCompleted;
+      const isCompleted = val === true || val === 1 || val === "1";
 
       if (isCompleted) {
         navigate(`/page6/${paperId}`);
       } else {
-       // localStorage.setItem("qp_code", paperId);
         navigate(`/page2/${paperId}`);
       }
     } catch (err) {
@@ -92,10 +97,12 @@ const Page7 = () => {
       setIsCheckingStatus(null); 
     }
   };
-  
-  const filteredPapers = testPapers.filter(paper =>
-    paper.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
+  const filteredPapers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return testPapers;
+    return testPapers.filter(paper => paper?.name?.toLowerCase().includes(term));
+  }, [testPapers, searchTerm]);
 
   if (loading) {
     return (
@@ -159,9 +166,14 @@ const Page7 = () => {
 
         <Box sx={{ 
           width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3
+          display: 'grid',
+          gap: 3,
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            lg: 'repeat(3, 1fr)'
+          },
+          alignItems: 'stretch'
         }}>
           {filteredPapers.length > 0 ? (
             filteredPapers.map((paper, index) => {
@@ -171,7 +183,8 @@ const Page7 = () => {
                     sx={{
                       width: '100%',
                       display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
+                      flexDirection: 'column',
+                      height: '100%',
                       borderRadius: 3,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                       transition: 'transform 0.3s ease, box-shadow 0.3s ease',
@@ -184,7 +197,7 @@ const Page7 = () => {
                     <CardMedia
                       component="img"
                       sx={{ 
-                        width: { xs: '100%', md: 250 },
+                        width: '100%',
                         height: 180,
                         objectFit: 'cover'
                       }}
@@ -202,21 +215,21 @@ const Page7 = () => {
                           {paper.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {paper.summary}
+                          {paper.summary || 'No summary available.'}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
                             <SchoolIcon fontSize="small" sx={{ mr: 1.5 }} />
-                            <Typography variant="body2">Created by: {paper.creator}</Typography>
+                            <Typography variant="body2">Created by: {paper.creator || 'Unknown'}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
                             <AccessTimeIcon fontSize="small" sx={{ mr: 1.5 }} />
-                            <Typography variant="body2">{paper.duration} minutes</Typography>
+                            <Typography variant="body2">{paper.duration ? `${paper.duration} minutes` : 'Duration not specified'}</Typography>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
                             <HelpOutlineIcon fontSize="small" sx={{ mr: 1.5 }} />
                             <Typography variant="body2">
-                              {paper.questions > 0 ? `${paper.questions} questions` : 'Questions not specified'}
+                              {typeof paper.questions === 'number' && paper.questions > 0 ? `${paper.questions} questions` : 'Questions not specified'}
                             </Typography>
                           </Box>
                         </Box>

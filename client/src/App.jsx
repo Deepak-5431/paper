@@ -8,6 +8,7 @@ import Page5 from "./pages/page5";
 import Page6 from "./pages/page6";
 import Page7 from "./pages/page7";
 import ProtectedRoute from "./components/protectedRoute";
+import RefreshWarningDialog from "./components/RefreshWarningDialog";
 
 const ErrorPage = () => (
   <div>
@@ -20,13 +21,10 @@ function App() {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <Page1 />, // Public route
+      element: <Page1 />,
       errorElement: <ErrorPage />,
     },
-    {
-      path: "/page1", 
-      element: <Page1 />, // Public route (same as '/')
-    },
+    
     {
       path: "/page2/:paperId",
       element: (
@@ -39,7 +37,9 @@ function App() {
       path: "/page3/:paperId",
       element: (
         <ProtectedRoute>
+          
           <Page3 />
+          <RefreshWarningDialog /> 
         </ProtectedRoute>
       ),
     },
@@ -48,6 +48,7 @@ function App() {
       element: (
         <ProtectedRoute>
           <Page4 />
+          <RefreshWarningDialog /> 
         </ProtectedRoute>
       ),
     },
@@ -56,6 +57,7 @@ function App() {
       element: (
         <ProtectedRoute>
           <Page5 />
+          <RefreshWarningDialog /> 
         </ProtectedRoute>
       ),
     },
@@ -64,15 +66,16 @@ function App() {
       element: (
         <ProtectedRoute>
           <Page6 />
+          <RefreshWarningDialog /> 
         </ProtectedRoute>
       ),
     },
     {
       path: "/select-test",
       element: (
-        <ProtectedRoute>
+        
           <Page7 />
-        </ProtectedRoute>
+        
       ),
     },
   ]);
@@ -80,6 +83,7 @@ function App() {
   return (
     <UserProvider>
       <RouterProvider router={router} />
+      
     </UserProvider>
   );
 }
