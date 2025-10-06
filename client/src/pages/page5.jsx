@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useUser } from "../context/UserContext";
-import Header2 from "../components/header2";
 import {
   Box,
   Typography,
@@ -181,7 +180,14 @@ const QuestionContentResults = ({ question }) => {
       </Box>
       <Divider sx={{ my: 1.5 }} />
 
-      <Box sx={{ my: 2, lineHeight: 1.8 }}>
+      <Box sx={{ 
+        my: 2, 
+        lineHeight: 1.8,
+         '& *': {
+          fontFamily: 'Roboto, "Helvetica Neue", Arial, sans-serif !important',
+          fontSize: '1rem !important'
+        }
+      }}>
         <MathJax dynamic>
           <div dangerouslySetInnerHTML={{ __html: translateMathInHtml(question.questionHtml) }} />
         </MathJax>
@@ -219,12 +225,16 @@ const QuestionContentResults = ({ question }) => {
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 1,
-                    pt: 0.5
+                    pt: 0.5,
+                    '& *': {
+                      fontFamily: 'Roboto, "Helvetica Neue", Arial, sans-serif !important',
+                      fontSize: '1rem !important'
+                    }
                   }
                 }}
                 control={
                   <ControlComponent
-                    checked={userSelected || isCorrect} // Show both selections
+                    checked={userSelected || isCorrect}
                     color={controlColor}
                     sx={{ pt: 1 }}
                   />
@@ -357,8 +367,7 @@ const Page5Internal = () => {
             if (kind === 'multiple') {
                 userAnswer = q.selectedAnswers[0].split(',').map(Number);
             } else {
-                // =========== THE FIX IS HERE ===========
-                // This now correctly handles 'single' and 'radio' by converting the string to a number.
+                
                 userAnswer = (kind === 'single' || kind === 'radio') ? Number(q.selectedAnswers[0]) : q.selectedAnswers[0];
             }
         }
@@ -431,16 +440,7 @@ const Page5Internal = () => {
   return (
     <ThemeProvider theme={theme}>
       <StyledContainer>
-        <Header2 
-            sections={sections} 
-            currentSectionName={currentSectionName}
-            onSectionClick={(start) => setCurrentQuestionIndex(start - 1)}
-            authState={authState}
-            questions={questions}
-            questionStatus={questionStatus}
-            currentQuestionNumber={currentQuestionIndex + 1}
-            onQuestionSelect={(questionNumber) => setCurrentQuestionIndex(questionNumber - 1)}
-        />
+       
         <MainContainer>
           <LeftPanel>
             <ScrollableContent>

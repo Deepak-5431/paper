@@ -39,8 +39,8 @@ function App() {
         <ProtectedRoute>
           
           <Page3 />
-          <RefreshWarningDialog /> 
-        </ProtectedRoute>
+        <RefreshWarningDialog /> 
+      </ProtectedRoute>
       ),
     },
     {

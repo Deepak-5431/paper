@@ -29,10 +29,10 @@ import { MathJaxContext, MathJax } from "better-react-mathjax";
 
 const mathJaxConfig = {
   loader: { 
-    load: ['[tex]/html', '[tex]/ams'] 
+    load: ['[tex]/html', '[tex]/ams', '[tex]/color'] 
   },
   tex: {
-    packages: { '[+]': ['html', 'ams'] },
+    packages: { '[+]': ['html', 'ams', 'color'] },
     inlineMath: [
       ['$', '$'],
       ['\\(', '\\)']
@@ -41,10 +41,14 @@ const mathJaxConfig = {
       ['$$', '$$'],
       ['\\[', '\\]']
     ],
-    processEscapes: true
+    processEscapes: true,
+    processEnvironments: true
   },
   startup: {
     typeset: false
+  },
+  options: {
+    enableMenu: false
   }
 };
 
@@ -562,56 +566,80 @@ const MathContent = React.memo(({ htmlContent }) => {
   if (!htmlContent) return null;
 
   const convertApiMathToLatex = (apiString) => {
-    // Remove backticks but keep line breaks for options
     let cleanStr = apiString
       .replace(/`/g, "")
-      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, " ")
       .trim();
 
-    // If no math operators, return as is with preserved line breaks
-    if (!cleanStr.includes('/') && !cleanStr.includes('sqrt')) {
+    if (!cleanStr.includes('/') && !cleanStr.includes('sqrt') && !cleanStr.includes('\\')) {
         return cleanStr; 
     }
 
-    // Handle sqrt notation
-    let latexStr = cleanStr.replace(/(\d*)sqrt\((\d+)\)/g, (match, coeff, content) => {
+    let latexStr = cleanStr;
+
+    latexStr = latexStr.replace(/(\d*)sqrt\(([^)]+)\)/g, (match, coeff, content) => {
         const coefficient = coeff ? coeff.trim() : '';
         return `${coefficient}\\sqrt{${content}}`;
     });
 
-    // Handle fractions
-    const parts = latexStr.split('/');
-    if (parts.length === 2) {
-        let numerator = parts[0].trim();
-        let denominator = parts[1].trim();
+    const fractionPattern = /\(([^)]+)\)\s*\/\s*\(([^)]+)\)/g;
+    latexStr = latexStr.replace(fractionPattern, (match, num, den) => {
+        return `\\frac{${num.trim()}}{${den.trim()}}`;
+    });
 
-        if (numerator.startsWith('(') && numerator.endsWith(')')) {
-            numerator = numerator.slice(1, -1);
+    if (latexStr.includes('/') && !latexStr.includes('\\frac')) {
+        const parts = latexStr.split('/');
+        if (parts.length === 2) {
+            let numerator = parts[0].trim();
+            let denominator = parts[1].trim();
+            
+            // Remove outer parentheses if they exist
+            if (numerator.startsWith('(') && numerator.endsWith(')')) {
+                numerator = numerator.slice(1, -1);
+            }
+            if (denominator.startsWith('(') && denominator.endsWith(')')) {
+                denominator = denominator.slice(1, -1);
+            }
+            
+            latexStr = `\\frac{${numerator}}{${denominator}}`;
         }
-        if (denominator.startsWith('(') && denominator.endsWith(')')) {
-            denominator = denominator.slice(1, -1);
-        }
-
-        latexStr = `\\frac{${numerator}}{${denominator}}`;
     }
+
+    // Handle multiplication signs
+    latexStr = latexStr.replace(/\*/g, '\\times');
+    
+    // Handle minus sign with proper spacing
+    latexStr = latexStr.replace(/-/g, ' - ');
+    latexStr = latexStr.replace(/\+/g, ' + ');
+    
+    // Clean up extra spaces
+    latexStr = latexStr.replace(/\s+/g, ' ').trim();
 
     return latexStr;
   };
   
   const latexString = convertApiMathToLatex(htmlContent);
-  const finalContent = latexString.includes('\\') ? `$${latexString}$` : latexString;
+  
+  // Determine if content needs math wrapping
+  const needsMathWrapping = latexString.includes('\\frac') || 
+                            latexString.includes('\\sqrt') || 
+                            latexString.includes('\\times');
+  
+  const finalContent = needsMathWrapping && !latexString.startsWith('$') 
+    ? `$${latexString}$` 
+    : latexString;
   
   return (
-      <MathJax dynamic>
-        <div
-          style={{ 
-            lineHeight: 1.8,
-            whiteSpace: 'pre-line',
-            wordBreak: 'break-word'
-          }}
-          dangerouslySetInnerHTML={{ __html: finalContent }}
-        />
-      </MathJax>
+    <MathJax dynamic hideUntilTypeset="first">
+      <span
+        style={{ 
+          display: 'inline',
+          verticalAlign: 'middle'
+        }}
+      >
+        {finalContent}
+      </span>
+    </MathJax>
   );
 });
 
@@ -717,8 +745,7 @@ const QuestionContent = React.memo(
         </Box>
 
         <Box>
-          <Box sx={{ typography: "body1" }}>
-            
+          <Box sx={{ typography: "body1", mb: 2, textAlign: 'left' }}>
             <MathContent htmlContent={question.questionHtml} />
             {question.questionImage && (
               <Box sx={{ my: 2 }}>
@@ -755,12 +782,11 @@ const QuestionContent = React.memo(
                     value={String(opt.originalIndex)}
                     control={<Radio />}
                     label={
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
-                        <Typography component="span" fontWeight="bold" sx={{ pt: '2px' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Typography component="span" fontWeight="bold">
                           ({String.fromCharCode(65 + opt.originalIndex)})
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
-                          
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
                           <MathContent htmlContent={opt.html} />
                           {opt.image && (
                             <img
@@ -770,6 +796,7 @@ const QuestionContent = React.memo(
                                 maxWidth: 200,
                                 maxHeight: 150,
                                 borderRadius: 4,
+                                marginLeft: 8
                               }}
                             />
                           )}
@@ -777,10 +804,10 @@ const QuestionContent = React.memo(
                       </Box>
                     }
                     sx={{
-                      alignItems: "flex-start",
+                      alignItems: "center",
                       mb: 1,
                       width: "100%",
-                      "& .MuiFormControlLabel-label": { mt: 0.5 },
+                      "& .MuiFormControlLabel-label": { width: '100%', display: 'flex', alignItems: 'center' },
                     }}
                   />
                 ) : null
@@ -788,7 +815,6 @@ const QuestionContent = React.memo(
             </RadioGroup>
           )}
 
-          
           {question.kind === "multiple" && (
             <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 1 }}>
               {question.processedOptions.map((opt) =>
@@ -804,11 +830,11 @@ const QuestionContent = React.memo(
                       />
                     }
                     label={
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%' }}>
-                        <Typography component="span" fontWeight="bold" sx={{ pt: '2px' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Typography component="span" fontWeight="bold">
                           ({String.fromCharCode(65 + opt.originalIndex)})
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
                           <MathContent htmlContent={opt.html} />
                           {opt.image && (
                             <img
@@ -818,6 +844,7 @@ const QuestionContent = React.memo(
                                 maxWidth: 200,
                                 maxHeight: 150,
                                 borderRadius: 4,
+                                marginLeft: 8
                               }}
                             />
                           )}
@@ -825,10 +852,10 @@ const QuestionContent = React.memo(
                       </Box>
                     }
                     sx={{
-                      alignItems: "flex-start",
+                      alignItems: "center",
                       mb: 1,
                       width: "100%",
-                      "& .MuiFormControlLabel-label": { mt: 0.5 },
+                      "& .MuiFormControlLabel-label": { width: '100%', display: 'flex', alignItems: 'center' },
                     }}
                   />
                 ) : null

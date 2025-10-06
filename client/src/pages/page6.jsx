@@ -1,7 +1,6 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "../context/UserContext";
-import Header2 from "../components/header2";
 import {
   Box,
   Typography,
@@ -20,7 +19,7 @@ const theme = createTheme();
 const StyledContainer = styled('div')(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
-  height: '100vh',
+  height: '90vh',
 }));
 
 const MainContainer = styled('div')(({ theme }) => ({
@@ -74,7 +73,6 @@ const Page6 = () => {
   return (
     <ThemeProvider theme={theme}>
       <StyledContainer>
-        <Header2 isPaused={true} />
         <MainContainer>
           <LeftPanel>
             <ScrollableContent>
